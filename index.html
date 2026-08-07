@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foot Prono Pro</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <link href="https://cdn.jsdelivr.net/npm/heroicons@2.0.18/css/heroicons.min.css" rel="stylesheet">
+</head>
+<body>
+    <header class="navbar">
+        <div class="logo">⚽ <span>FootProno Pro</span></div>
+        <div class="user-badge">
+            <span id="credits-count">10</span> 🪙 Jetons
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- SECTION 1 : PRONOSTICS -->
+        <div id="section-predict" class="app-section">
+            <section class="card">
+                <h2>📊 Sélection Rapide</h2>
+                <div class="form-group">
+                    <label for="league-select" style="font-size: 13px; color: var(--text-muted); margin-bottom: 5px; display: block;">Championnat :</label>
+                    <select id="league-select">
+                        <option value="Ligue 1">⚽ Ligue 1 (France)</option>
+                        <option value="Champions League">🏆 UEFA Champions League</option>
+                        <option value="Premier League">🇬🇧 Premier League (Angleterre)</option>
+                        <option value="La Liga">🇪🇸 La Liga (Espagne)</option>
+                        <option value="Serie A">🇮🇹 Serie A (Italie)</option>
+                        <option value="Bundesliga">🇩🇪 Bundesliga (Allemagne)</option>
+                    </select>
+                </div>
+                <div class="teams-input">
+                    <input type="text" id="team1" placeholder="Domicile" autocomplete="off">
+                    <span class="vs">VS</span>
+                    <input type="text" id="team2" placeholder="Extérieur" autocomplete="off">
+                </div>
+                <button id="btn-predict" class="btn-primary">⚡ Générer l'Analyse (1 Jeton)</button>
+            </section>
+
+            <section id="result-card" class="card result-card hidden">
+                <div class="result-header">
+                    <h3 id="match-title">Analyse du Match</h3>
+                    <span class="badge" id="league-badge">⚽ Ligue 1</span>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <span class="stat-label">Vainqueur</span>
+                        <strong id="pred-winner" class="highlight">-</strong>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Fiabilité</span>
+                        <strong id="pred-percent" class="highlight-green">0%</strong>
+                    </div>
+                </div>
+                <div class="prediction-details">
+                    <p>🎯 Conseil Pari : <span id="pred-tip">-</span></p>
+                    <p>📊 Score Probable : <span id="pred-score">-</span></p>
+                    <p>🔥 Forme : <span id="pred-form">-</span></p>
+                </div>
+            </section>
+
+            <section class="card upcoming-matches">
+                <h3>🗓️ Matchs Réels du Jour</h3>
+                <p style="font-size:12px;color:#94a3b8;">Chargement...</p>
+            </section>
+        </div>
+
+        <!-- SECTION 2 : EN DIRECT -->
+        <div id="section-live" class="app-section hidden">
+            <!-- Injecté dynamiquement par script.js -->
+        </div>
+
+        <!-- SECTION 3 : COMPTE -->
+        <div id="section-account" class="app-section hidden">
+            <section class="card profile-header">
+                <div class="avatar">U</div>
+                <h2>Utilisateur_734</h2>
+                <p>Mon statut : <span class="badge premium">Premium 🔥</span></p>
+            </section>
+            <section class="card token-options">
+                <h3>💰 Mes Jetons</h3>
+                <div class="token-balance">
+                    <strong>10</strong> 🪙 Jetons Actuels
+                </div>
+                <button class="btn-secondary">Acheter des Jetons</button>
+            </section>
+        </div>
+    </main>
+
+    <!-- TAB BAR -->
+    <nav class="tab-bar">
+        <a href="#" class="tab-item active" onclick="showSection('predict')">
+            <span class="heroicons-mini heroicons-outline_chart-bar icon"></span>
+            Pronos
+        </a>
+        <a href="#" class="tab-item" onclick="showSection('live')">
+            <span class="heroicons-mini heroicons-outline_video-camera icon"></span>
+            Direct
+        </a>
+        <a href="#" class="tab-item" onclick="showSection('account')">
+            <span class="heroicons-mini heroicons-outline_user icon"></span>
+            Compte
+        </a>
+    </nav>
+
+    <script type="module" src="firebase.js"></script>
+    <script src="script.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+</body>
+</html>
