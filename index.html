@@ -10,12 +10,25 @@
     <link href="https://cdn.jsdelivr.net/npm/heroicons@2.0.18/css/heroicons.min.css" rel="stylesheet">
 </head>
 <body>
-    <header class="navbar">
-        <div class="logo">⚽ <span>FootProno Pro</span></div>
-        <div class="user-badge">
-            <span id="credits-count">10</span> 🪙 Jetons
+    <header class="app-header">
+        <div class="logo">
+            ⚽ <span>SmartPronoIA</span>
+        </div>
+        
+        <div class="header-right">
+            <!-- Compteur de Jetons -->
+<div class="user-credits">
+    <span id="credits-count">0</span> 🪙 Jetons
+</div>
+            <!-- Boutons de Connexion Firebase -->
+            <div class="user-auth">
+                <button id="btn-login" onclick="loginWithGoogle()" class="btn-auth">🔑 Connexion</button>
+                <button id="btn-logout" onclick="logoutUser()" class="btn-auth hidden">🚪 Déconnexion</button>
+            </div>
         </div>
     </header>
+
+    <main class="container">
 
     <main class="container">
         <!-- SECTION 1 : PRONOSTICS -->
