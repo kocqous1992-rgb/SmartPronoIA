@@ -1,7 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
     getAuth, 
-    signInWithPopup, 
+    signInWithRedirect, 
+    getRedirectResult, 
     GoogleAuthProvider, 
     signOut, 
     onAuthStateChanged 
@@ -15,7 +16,7 @@ import {
     increment 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// Vos clés réelles
+// Configuration Firebase
 const firebaseConfig = {
     apiKey: "AIzaSyDmu3fAgmDBYblNZNDlb92zml1FI9nE8Cg",
     authDomain: "smart-prono-ia.firebaseapp.com",
@@ -33,7 +34,16 @@ const googleProvider = new GoogleAuthProvider();
 
 export let currentUser = null;
 
-// Écouter l'état de connexion
+// Gérer le retour de redirection Google
+getRedirectResult(auth).then(async (result) => {
+    if (result && result.user) {
+        await syncUserData(result.user);
+    }
+}).catch((error) => {
+    console.error("Erreur redirection :", error);
+});
+
+// Écouter le changement d'état de connexion
 onAuthStateChanged(auth, async (user) => {
     const btnLogin = document.getElementById('btn-login');
     const btnLogout = document.getElementById('btn-logout');
@@ -51,10 +61,10 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-// Connexion Google
+// Connexion Google via Redirection (Parfait sur mobile)
 window.loginWithGoogle = async function() {
     try {
-        await signInWithPopup(auth, googleProvider);
+        await signInWithRedirect(auth, googleProvider);
     } catch (error) {
         console.error("Erreur de connexion Google :", error);
         alert("Erreur lors de la connexion : " + error.message);
@@ -70,7 +80,7 @@ window.logoutUser = async function() {
     }
 };
 
-// Sync avec Firestore
+// Synchroniser les jetons dans Firestore
 async function syncUserData(user) {
     const userRef = doc(db, "users", user.uid);
     const userSnap = await getDoc(userRef);
