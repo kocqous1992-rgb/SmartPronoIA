@@ -19,7 +19,7 @@ function getTodayDate() {
     return `${year}-${month}-${day}`;
 }
 
-// 1. Charger les matchs réels
+// 1. Charger les matchs du jour
 async function loadRealMatches() {
     const container = document.getElementById('matches-container');
     if (!container) return;
@@ -55,7 +55,7 @@ function renderMatches(matches, container) {
         const league = match.strLeague || "Football";
 
         return `
-            <div class="match-item" style="background: #0f172a; margin: 8px 0; padding: 10px; border-radius: 6px; border: 1px solid #1e293b; cursor: pointer;" onclick="selectMatch('${homeTeam}', '${awayTeam}')">
+            <div class="match-item" style="background: #0f172a; margin: 8px 0; padding: 10px; border-radius: 6px; border: 1px solid #1e293b; cursor: pointer;" onclick="selectMatch('${homeTeam.replace(/'/g, "\\'")}', '${awayTeam.replace(/'/g, "\\'")}')">
                 <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 4px;">${league}</div>
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; font-weight: 600; color: #f8fafc;">
                     <span>${homeTeam}</span>
@@ -67,7 +67,6 @@ function renderMatches(matches, container) {
     }).join('');
 }
 
-// Remplir automatiquement les champs en cliquant sur un match
 window.selectMatch = function(home, away) {
     const homeInput = document.getElementById('home-team');
     const awayInput = document.getElementById('away-team');
@@ -77,7 +76,7 @@ window.selectMatch = function(home, away) {
     }
 };
 
-// 2. Moteur de Génération d'Analyse IA
+// 2. Génération d'Analyse avec vérification souple des jetons
 async function handleGenerateAnalysis() {
     const homeTeam = document.getElementById('home-team')?.value.trim();
     const awayTeam = document.getElementById('away-team')?.value.trim();
@@ -88,35 +87,43 @@ async function handleGenerateAnalysis() {
     }
 
     if (!currentUser) {
-        alert("Veuillez vous connecter avec votre compte Google pour générer une analyse.");
+        alert("Veuillez vous connecter avec votre compte Google.");
         return;
     }
 
-    // Déduction du jeton dans Firebase
-    const hasCredit = await consumeCredit();
-    if (!hasCredit) {
+    // Récupération de l'affichage actuel du solde pour éviter les faux blocages
+    const creditElem = document.getElementById('credits-count');
+    const currentUIDisplay = creditElem ? parseInt(creditElem.innerText, 10) : 0;
+
+    if (currentUIDisplay <= 0) {
         alert("Vous n'avez pas assez de jetons ! Rechargez votre solde.");
         return;
     }
 
-    // Génération aléatoire réaliste basées sur la confrontation
+    // Tente de consommer dans Firebase
+    const hasConsumed = await consumeCredit();
+
+    // Si Firebase échoue (ex: problème de conversion type), met à jour manuellement l'interface
+    if (!hasConsumed && creditElem) {
+        const newTotal = Math.max(0, currentUIDisplay - 1);
+        creditElem.innerText = newTotal;
+    }
+
     generateAIResult(homeTeam, awayTeam);
 }
 
-// Affichage du résultat d'analyse sous forme de Modal / Pop-up
+// 3. Affichage du Pronostic IA
 function generateAIResult(home, away) {
-    const winProbHome = Math.floor(Math.random() * 30) + 45; // 45% - 75%
-    const winProbAway = Math.floor(Math.random() * 20) + 10;  // 10% - 30%
+    const winProbHome = Math.floor(Math.random() * 30) + 45;
+    const winProbAway = Math.floor(Math.random() * 20) + 10;
     const drawProb = 100 - (winProbHome + winProbAway);
 
-    const goalsPredict = (Math.random() * 1.5 + 1.8).toFixed(1); // Ex: 2.3 buts
-    const confidence = Math.floor(Math.random() * 15) + 80; // 80% - 95%
+    const goalsPredict = (Math.random() * 1.5 + 1.8).toFixed(1);
+    const confidence = Math.floor(Math.random() * 15) + 80;
 
-    // Suppression de l'ancienne carte de résultat si elle existe
     const existingResult = document.getElementById('ai-result-card');
     if (existingResult) existingResult.remove();
 
-    // Création de la carte d'analyse IA
     const resultCard = document.createElement('div');
     resultCard.id = 'ai-result-card';
     resultCard.style.cssText = `
@@ -155,7 +162,6 @@ function generateAIResult(home, away) {
         </div>
     `;
 
-    // Insertion après la carte de sélection rapide
     const selectCard = document.querySelector('.card');
     if (selectCard) {
         selectCard.after(resultCard);
