@@ -2,11 +2,47 @@ import { db, currentUser, consumeCredit } from "./firebase.js";
 
 const API_URL = "https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=";
 
+let currentLiveMatches = [];
+
+// Liste des compétitions
+const EXTENDED_LEAGUES = [
+    { value: "ALL", name: "🌐 Toutes les compétitions" },
+    // Europe
+    { value: "Ligue 1", name: "⚽ Ligue 1 (France)" },
+    { value: "Ligue 2", name: "🇫🇷 Ligue 2 (France)" },
+    { value: "Premier League", name: "🇬🇧 Premier League (Angleterre)" },
+    { value: "Championship", name: "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Championship (Angleterre)" },
+    { value: "La Liga", name: "🇪🇸 La Liga (Espagne)" },
+    { value: "Serie A", name: "🇮🇹 Serie A (Italie)" },
+    { value: "Bundesliga", name: "🇩🇪 Bundesliga (Allemagne)" },
+    { value: "Eredivisie", name: "🇳🇱 Eredivisie (Pays-Bas)" },
+    { value: "Primeira Liga", name: "🇵🇹 Liga Portugal" },
+    { value: "Pro League", name: "🇧🇪 Pro League (Belgique)" },
+    { value: "Super Lig", name: "🇹🇷 Süper Lig (Turquie)" },
+    // Coupes d'Europe
+    { value: "UEFA Champions League", name: "🏆 Champions League" },
+    { value: "UEFA Europa League", name: "🇪🇺 Europa League" },
+    { value: "UEFA Conference League", name: "🇪🇺 Conference League" },
+    // Afrique & Moyen-Orient
+    { value: "CAF Champions League", name: "🌍 Ligue des Champions CAF" },
+    { value: "Saudi Pro League", name: "🇸🇦 Saudi Pro League (Arabie Saoudite)" },
+    { value: "Egyptian Premier League", name: "🇪🇬 Premier League (Égypte)" },
+    { value: "Botola Pro", name: "🇲🇦 Botola Pro (Maroc)" },
+    { value: "Ligue 1 Algeria", name: "🇩🇿 Ligue 1 (Algérie)" },
+    // Amériques & Asie
+    { value: "MLS", name: "🇺🇸 Major League Soccer (USA)" },
+    { value: "Brasileirao", name: "🇧🇷 Série A (Brésil)" },
+    { value: "Primera Division Argentina", name: "🇦🇷 Liga Argentina" },
+    { value: "Liga MX", name: "🇲🇽 Liga MX (Mexique)" },
+    { value: "J1 League", name: "🇯🇵 J1 League (Japon)" }
+];
+
 document.addEventListener('DOMContentLoaded', () => {
     initApp();
 });
 
 function initApp() {
+    populateLeagueSelect();
     loadRealMatches();
     setupEventListeners();
     loadLocalHistory();
@@ -21,7 +57,16 @@ function getTodayDate() {
     return `${year}-${month}-${day}`;
 }
 
-// Synchroniser l'affichage du solde
+function populateLeagueSelect() {
+    const leagueSelect = document.getElementById('league-select');
+    if (!leagueSelect) return;
+
+    leagueSelect.innerHTML = EXTENDED_LEAGUES
+        .filter(l => l.value !== 'ALL')
+        .map(l => `<option value="${l.value}">${l.name}</option>`)
+        .join('');
+}
+
 function syncCreditsUI() {
     const savedCredits = localStorage.getItem('smartprono_credits');
     const credits = savedCredits !== null ? parseInt(savedCredits, 10) : 10;
@@ -38,7 +83,7 @@ function updateCredits(newTotal) {
     syncCreditsUI();
 }
 
-// 1. Navigation entre onglets
+// 1. Navigation Onglets
 window.switchTab = function(tabName) {
     document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
     document.querySelectorAll('.tab-item').forEach(tab => tab.classList.remove('active'));
@@ -56,7 +101,7 @@ window.switchTab = function(tabName) {
     }
 };
 
-// 2. Charger les matchs réels
+// 2. Matchs Réels (Pronos)
 async function loadRealMatches() {
     const container = document.getElementById('matches-container');
     if (!container) return;
@@ -75,10 +120,26 @@ async function loadRealMatches() {
     }
 }
 
-// 3. Charger les matchs direct
+// 3. Matchs en Direct + Filtres
 async function loadLiveMatches() {
     const container = document.getElementById('live-matches-container');
     if (!container) return;
+
+    let filterElem = document.getElementById('live-league-filter');
+    if (!filterElem) {
+        const filterCard = document.createElement('div');
+        filterCard.style.cssText = "margin-bottom: 12px;";
+        filterCard.innerHTML = `
+            <label style="display:block; font-size:0.8rem; color:#94a3b8; margin-bottom:5px;">Filtrer par championnat :</label>
+            <select id="live-league-filter" style="width:100%; padding:10px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:white; font-size:0.9rem;">
+                ${EXTENDED_LEAGUES.map(l => `<option value="${l.value}">${l.name}</option>`).join('')}
+            </select>
+        `;
+        container.before(filterCard);
+        
+        filterElem = document.getElementById('live-league-filter');
+        filterElem.addEventListener('change', (e) => filterLiveMatches(e.target.value));
+    }
 
     container.innerHTML = `<div style="text-align:center; padding: 15px; color: #94a3b8;">⚡ Recherche...</div>`;
 
@@ -87,20 +148,40 @@ async function loadLiveMatches() {
     try {
         const response = await fetch(`${API_URL}${today}&s=Soccer`);
         const data = await response.json();
-        const matches = data.events || [];
-        renderMatches(matches, container);
+        currentLiveMatches = data.events || [];
+        
+        const selectedLeague = filterElem ? filterElem.value : 'ALL';
+        filterLiveMatches(selectedLeague);
     } catch (error) {
-        container.innerHTML = `<div style="text-align:center; padding: 15px; color: #94a3b8;">Aucun match en direct.</div>`;
+        container.innerHTML = `<div style="text-align:center; padding: 15px; color: #94a3b8;">Aucun match en direct disponible.</div>`;
     }
 }
 
-function renderMatches(matches, container) {
-    if (!matches || matches.length === 0) {
+function filterLiveMatches(leagueQuery) {
+    const container = document.getElementById('live-matches-container');
+    if (!container) return;
+
+    if (currentLiveMatches.length === 0) {
         container.innerHTML = `<div style="text-align:center; padding: 15px; color: #94a3b8;">Aucun match au programme.</div>`;
         return;
     }
 
-    container.innerHTML = matches.slice(0, 10).map(match => `
+    let filtered = currentLiveMatches;
+
+    if (leagueQuery !== 'ALL') {
+        filtered = currentLiveMatches.filter(m => m.strLeague && m.strLeague.toLowerCase().includes(leagueQuery.toLowerCase()));
+    }
+
+    renderMatches(filtered, container);
+}
+
+function renderMatches(matches, container) {
+    if (!matches || matches.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding: 15px; color: #94a3b8;">Aucun match pour cette sélection.</div>`;
+        return;
+    }
+
+    container.innerHTML = matches.slice(0, 20).map(match => `
         <div style="background: #0f172a; margin: 8px 0; padding: 10px; border-radius: 6px; border: 1px solid #1e293b; cursor: pointer;" 
              onclick="selectMatch('${match.strHomeTeam.replace(/'/g, "\\'")}', '${match.strAwayTeam.replace(/'/g, "\\'")}')">
             <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 4px;">${match.strLeague || "Football"}</div>
@@ -119,7 +200,7 @@ window.selectMatch = function(home, away) {
     document.getElementById('away-team').value = away;
 };
 
-// 4. Générer l'Analyse IA + Déduction Solde
+// 4. Moteur de Pronostics IA
 function handleGenerateAnalysis() {
     const home = document.getElementById('home-team')?.value.trim();
     const away = document.getElementById('away-team')?.value.trim();
@@ -136,7 +217,6 @@ function handleGenerateAnalysis() {
         return;
     }
 
-    // Déduction
     updateCredits(currentCredits - 1);
 
     const winHome = Math.floor(Math.random() * 30) + 45;
@@ -182,11 +262,11 @@ function displayAIResult(data) {
         </div>
     `;
 
-    document.querySelector('.card').after(card);
+    document.querySelector('#section-pronos .card').after(card);
     card.scrollIntoView({ behavior: 'smooth' });
 }
 
-// 5. Rechargement de Jetons (Publicité Simulée)
+// 5. Rechargement de Jetons
 window.handleRechargeTokens = function() {
     const btn = document.querySelector('.btn-recharge');
     if (!btn) return;
@@ -241,7 +321,6 @@ function loadLocalHistory() {
 function setupEventListeners() {
     document.getElementById('btn-generate')?.addEventListener('click', handleGenerateAnalysis);
     
-    // Attacher l'événement sur le bouton de rechargement
     const btnRecharge = document.querySelector('.btn-recharge');
     if (btnRecharge) {
         btnRecharge.onclick = window.handleRechargeTokens;
