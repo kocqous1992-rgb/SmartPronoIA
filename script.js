@@ -1,4 +1,5 @@
 import { db, currentUser, consumeCredit } from "./firebase.js";
+import { collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const API_URL = "https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=";
 
@@ -19,24 +20,23 @@ function getTodayDate() {
     return `${year}-${month}-${day}`;
 }
 
-// 1. Navigation entre les Onglets (Pronos, Direct, Compte)
+// 1. Navigation entre les Onglets
 window.switchTab = function(tabName) {
-    // Masquer toutes les sections
     document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
     document.querySelectorAll('.tab-item').forEach(tab => tab.classList.remove('active'));
 
-    // Activer l'onglet sélectionné
     const targetSection = document.getElementById(`section-${tabName}`);
     const targetTab = document.getElementById(`tab-${tabName}`);
 
     if (targetSection) targetSection.classList.add('active');
     if (targetTab) targetTab.classList.add('active');
 
-    // Charger le contenu spécifique à l'onglet
     if (tabName === 'direct') {
         loadLiveMatches();
     } else if (tabName === 'compte') {
         updateAccountUI();
+    } else if (tabName === 'pronos') {
+        loadHistory();
     }
 };
 
@@ -124,27 +124,7 @@ window.selectMatch = function(home, away) {
     }
 };
 
-// 4. Mettre à jour la section Compte
-function updateAccountUI() {
-    const userEmailElem = document.getElementById('user-email');
-    const accountCredits = document.getElementById('account-credits');
-    const creditElem = document.getElementById('credits-count');
-    const loginBtn = document.getElementById('btn-login-account');
-
-    if (currentUser) {
-        if (userEmailElem) userEmailElem.innerText = currentUser.email;
-        if (loginBtn) loginBtn.classList.add('hidden');
-    } else {
-        if (userEmailElem) userEmailElem.innerText = "Non connecté";
-        if (loginBtn) loginBtn.classList.remove('hidden');
-    }
-
-    if (accountCredits && creditElem) {
-        accountCredits.innerText = creditElem.innerText;
-    }
-}
-
-// 5. Génération d'Analyse IA
+// 4. Génération d'Analyse IA + Sauvegarde Firestore
 async function handleGenerateAnalysis() {
     const homeTeam = document.getElementById('home-team')?.value.trim();
     const awayTeam = document.getElementById('away-team')?.value.trim();
@@ -177,14 +157,40 @@ async function handleGenerateAnalysis() {
     generateAIResult(homeTeam, awayTeam);
 }
 
-function generateAIResult(home, away) {
+async function generateAIResult(home, away) {
     const winProbHome = Math.floor(Math.random() * 30) + 45;
     const winProbAway = Math.floor(Math.random() * 20) + 10;
     const drawProb = 100 - (winProbHome + winProbAway);
 
     const goalsPredict = (Math.random() * 1.5 + 1.8).toFixed(1);
     const confidence = Math.floor(Math.random() * 15) + 80;
+    const advice = winProbHome > 50 ? 'Victoire ' + home : 'Plus de 1.5 Buts dans le match';
 
+    const analysisData = {
+        home,
+        away,
+        winProbHome,
+        winProbAway,
+        drawProb,
+        goalsPredict,
+        confidence,
+        advice,
+        createdAt: new Date().toISOString()
+    };
+
+    // Sauvegarde dans la sous-collection de l'utilisateur
+    if (currentUser) {
+        try {
+            await addDoc(collection(db, "users", currentUser.uid, "analyses"), analysisData);
+        } catch (e) {
+            console.error("Erreur de sauvegarde de l'analyse :", e);
+        }
+    }
+
+    displayResultCard(analysisData);
+}
+
+function displayResultCard(data) {
     const existingResult = document.getElementById('ai-result-card');
     if (existingResult) existingResult.remove();
 
@@ -202,26 +208,26 @@ function generateAIResult(home, away) {
     resultCard.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <h4 style="margin:0; color:#38bdf8;">🧠 Pronostic IA</h4>
-            <span style="background:#22c55e; color:#000; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:bold;">Confiance : ${confidence}%</span>
+            <span style="background:#22c55e; color:#000; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:bold;">Confiance : ${data.confidence}%</span>
         </div>
         <div style="font-size:0.9rem; font-weight:bold; text-align:center; margin-bottom:12px;">
-            ${home} <span style="color:#38bdf8;">VS</span> ${away}
+            ${data.home} <span style="color:#38bdf8;">VS</span> ${data.away}
         </div>
         <div style="background:#0f172a; padding:10px; border-radius:8px; font-size:0.8rem; margin-bottom:10px;">
             <div>📊 <strong>Probabilités :</strong></div>
             <div style="display:flex; justify-content:space-between; margin-top:5px; color:#cbd5e1;">
-                <span>Victoire ${home} : <strong>${winProbHome}%</strong></span>
-                <span>Nul : <strong>${drawProb}%</strong></span>
-                <span>Victoire ${away} : <strong>${winProbAway}%</strong></span>
+                <span>Victoire ${data.home} : <strong>${data.winProbHome}%</strong></span>
+                <span>Nul : <strong>${data.drawProb}%</strong></span>
+                <span>Victoire ${data.away} : <strong>${data.winProbAway}%</strong></span>
             </div>
         </div>
         <div style="background:#0f172a; padding:10px; border-radius:8px; font-size:0.8rem;">
             <div>🎯 <strong>Conseil Sélectionné :</strong></div>
             <div style="color:#22c55e; font-size:0.95rem; font-weight:bold; margin-top:4px;">
-                ${winProbHome > 50 ? 'Victoire ' + home : 'Plus de 1.5 Buts dans le match'}
+                ${data.advice}
             </div>
             <div style="color:#94a3b8; font-size:0.75rem; margin-top:4px;">
-                Moyenne de buts attendue : ${goalsPredict} buts
+                Moyenne de buts attendue : ${data.goalsPredict} buts
             </div>
         </div>
     `;
@@ -230,6 +236,43 @@ function generateAIResult(home, away) {
     if (selectCard) {
         selectCard.after(resultCard);
         resultCard.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+// 5. Charger l'historique des pronostics
+async function loadHistory() {
+    if (!currentUser) return;
+
+    try {
+        const historyRef = collection(db, "users", currentUser.uid, "analyses");
+        const q = query(historyRef, orderBy("createdAt", "desc"), limit(5));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+            const lastDoc = querySnapshot.docs[0].data();
+            displayResultCard(lastDoc);
+        }
+    } catch (e) {
+        console.error("Erreur lors de la récupération de l'historique :", e);
+    }
+}
+
+function updateAccountUI() {
+    const userEmailElem = document.getElementById('user-email');
+    const accountCredits = document.getElementById('account-credits');
+    const creditElem = document.getElementById('credits-count');
+    const loginBtn = document.getElementById('btn-login-account');
+
+    if (currentUser) {
+        if (userEmailElem) userEmailElem.innerText = currentUser.email;
+        if (loginBtn) loginBtn.classList.add('hidden');
+    } else {
+        if (userEmailElem) userEmailElem.innerText = "Non connecté";
+        if (loginBtn) loginBtn.classList.remove('hidden');
+    }
+
+    if (accountCredits && creditElem) {
+        accountCredits.innerText = creditElem.innerText;
     }
 }
 
