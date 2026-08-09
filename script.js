@@ -1,155 +1,144 @@
-let credits = 10;
+import { db, currentUser, consumeCredit } from "./firebase.js";
 
-// === 1. RECUPERATION DES MATCHS VIA SCRIPT DYNAMIQUE ===
-function fetchFootballData() {
-    const upcomingContainer = document.querySelector('.upcoming-matches');
-    if (upcomingContainer) {
-        upcomingContainer.innerHTML = '<h3>🗓️ Matchs Réels du Jour</h3><p style="font-size:12px;color:#94a3b8;">Chargement des données en direct...</p>';
-    }
+// Clé API-Football / Sportsmonks (Remplace si tu as ta propre clé)
+const API_KEY = "3e7eafe1ea6045bc97395ef3cdbebf1f"; 
+const API_URL = "https://v3.football.api-sports.io";
 
-    // Nettoyage de l'ancien script s'il existe
-    const oldScript = document.getElementById('jsonp-football-script');
-    if (oldScript) oldScript.remove();
+// Initialisation au chargement de la page
+document.addEventListener('DOMContentLoaded', () => {
+    initApp();
+});
 
-    // Injection du script pour contourner la sécurité du navigateur mobile
-    const script = document.createElement('script');
-    script.id = 'jsonp-football-script';
-    script.src = 'https://site.api.espn.com/apis/site/v2/sports/soccer/all/scoreboard?callback=handleEspnResponse';
-    
-    // Gestion d'erreur si le réseau coupe
-    script.onerror = function() {
-        if (upcomingContainer) {
-            upcomingContainer.innerHTML = '<h3>🗓️ Matchs Réels du Jour</h3><p style="font-size:12px;color:#ef4444;">Impossible de se connecter au réseau.</p>';
-        }
-    };
-
-    document.body.appendChild(script);
+function initApp() {
+    loadTodayMatches();
+    setupEventListeners();
 }
 
-// Fonction globale appelée automatiquement par l'API
-window.handleEspnResponse = function(data) {
-    const upcomingContainer = document.querySelector('.upcoming-matches');
-    const liveContainer = document.getElementById('section-live');
+// Obtenir la date du jour au format YYYY-MM-DD
+function getTodayDate() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
 
-    if (!data || !data.events || data.events.length === 0) {
-        if (upcomingContainer) {
-            upcomingContainer.innerHTML = '<h3>🗓️ Matchs Réels du Jour</h3><p style="font-size:12px;color:#94a3b8;">Aucun match disponible pour le moment.</p>';
-        }
+// 1. Charger UNIQUEMENT les matchs du jour
+async function loadTodayMatches() {
+    const container = document.getElementById('matches-container');
+    if (!container) return;
+
+    container.innerHTML = `<div class="loading">Chargement des matchs du jour...</div>`;
+
+    const today = getTodayDate();
+
+    try {
+        const response = await fetch(`${API_URL}/fixtures?date=${today}`, {
+            method: "GET",
+            headers: {
+                "x-apisports-key": API_KEY
+            }
+        });
+
+        const data = await response.json();
+        const matches = data.response || [];
+
+        renderMatches(matches, container, "Aucun match prévu aujourd'hui.");
+    } catch (error) {
+        console.error("Erreur chargement matchs du jour:", error);
+        container.innerHTML = `<div class="error">Impossible de charger les matchs du jour.</div>`;
+    }
+}
+
+// 2. Charger UNIQUEMENT les matchs actuellement en direct
+async function loadLiveMatches() {
+    const container = document.getElementById('matches-container');
+    if (!container) return;
+
+    container.innerHTML = `<div class="loading">Recherche des matchs en direct...</div>`;
+
+    try {
+        const response = await fetch(`${API_URL}/fixtures?live=all`, {
+            method: "GET",
+            headers: {
+                "x-apisports-key": API_KEY
+            }
+        });
+
+        const data = await response.json();
+        const liveMatches = data.response || [];
+
+        renderMatches(liveMatches, container, "Aucun match actuellement en direct.");
+    } catch (error) {
+        console.error("Erreur chargement matchs en direct:", error);
+        container.innerHTML = `<div class="error">Impossible de charger les matchs en direct.</div>`;
+    }
+}
+
+// 3. Affichage dynamique des cartes de matchs
+function renderMatches(matches, container, emptyMessage) {
+    if (matches.length === 0) {
+        container.innerHTML = `<div class="empty">${emptyMessage}</div>`;
         return;
     }
 
-    // 1. Remplissage des matchs du jour
-    if (upcomingContainer) {
-        upcomingContainer.innerHTML = '<h3>🗓️ Matchs Réels du Jour</h3>';
-        
-        data.events.slice(0, 15).forEach(event => {
-            const comp = event.competitions[0];
-            const league = event.league?.name || "Football";
-            const home = comp?.competitors[0]?.team?.shortDisplayName || "Équipe 1";
-            const away = comp?.competitors[1]?.team?.shortDisplayName || "Équipe 2";
-            const status = event.status?.type?.shortDetail || "À venir";
+    container.innerHTML = matches.map(item => {
+        const fixture = item.fixture;
+        const teams = item.teams;
+        const status = fixture.status.short; // NS = Not Started, 1H/2H = Live, FT = Finished
 
-            const div = document.createElement('div');
-            div.className = 'match-item';
-            div.onclick = () => selectMatch(home, away, league);
-            div.innerHTML = `
-                <span class="m-league">${league.substring(0, 12)}</span>
-                <span class="m-teams">${home} 🆚 ${away}</span>
-                <span class="m-time">${status}</span>
-            `;
-            upcomingContainer.appendChild(div);
-        });
-    }
+        let statusBadge = `<span class="badge ${status === 'FT' ? 'ft' : 'live'}">${status}</span>`;
 
-    // 2. Remplissage de l'onglet En Direct
-    if (liveContainer) {
-        liveContainer.innerHTML = `
-            <section class="card">
-                <h2>📺 Matchs En Direct / Du Jour</h2>
-                <div id="live-list"></div>
-            </section>
-        `;
-        const liveList = document.getElementById('live-list');
-
-        data.events.slice(0, 8).forEach(event => {
-            const comp = event.competitions[0];
-            const home = comp.competitors[0].team.shortDisplayName;
-            const away = comp.competitors[1].team.shortDisplayName;
-            const scoreHome = comp.competitors[0].score || "0";
-            const scoreAway = comp.competitors[1].score || "0";
-            const time = event.status.type.shortDetail;
-
-            const div = document.createElement('div');
-            div.className = 'live-item ongoing';
-            div.innerHTML = `
-                <span class="m-league">🏆 ${event.league?.name || 'Football'}</span>
-                <div class="live-score">
-                    <span class="l-team">${home}</span>
-                    <span class="l-score">${scoreHome} - ${scoreAway}</span>
-                    <span class="l-team">${away}</span>
+        return `
+            <div class="match-card">
+                <div class="league">${item.league.name} (${item.league.country})</div>
+                <div class="teams">
+                    <span class="team">${teams.home.name}</span>
+                    <span class="vs">VS</span>
+                    <span class="team">${teams.away.name}</span>
                 </div>
-                <span class="l-time">🔴 ${time}</span>
-            `;
-            liveList.appendChild(div);
+                <div class="status-info">${statusBadge}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+// 4. Génération d'analyse IA avec déduction de 1 jeton
+async function handleGenerateAnalysis() {
+    if (!currentUser) {
+        alert("Veuillez vous connecter avec votre compte Google pour générer une analyse.");
+        return;
+    }
+
+    const hasCredit = await consumeCredit();
+    if (!hasCredit) {
+        alert("Vous n'avez pas assez de jetons. Vous devez recharger votre solde.");
+        return;
+    }
+
+    // Logique de génération des pronostics
+    alert("Analyse en cours de génération avec succès ! (-1 Jeton)");
+}
+
+// Écouteurs d'événements pour les onglets (Pronos, Direct, Générer)
+function setupEventListeners() {
+    const btnGenerate = document.getElementById('btn-generate');
+    const tabPronos = document.getElementById('tab-pronos');
+    const tabDirect = document.getElementById('tab-direct');
+
+    if (btnGenerate) {
+        btnGenerate.addEventListener('click', handleGenerateAnalysis);
+    }
+
+    if (tabPronos) {
+        tabPronos.addEventListener('click', () => {
+            loadTodayMatches();
         });
     }
-};
 
-// === 2. ALGORITHME DE PRÉDICTION ===
-const btnPredict = document.getElementById('btn-predict');
-if (btnPredict) {
-    btnPredict.addEventListener('click', () => {
-        const team1 = document.getElementById('team1').value.trim();
-        const team2 = document.getElementById('team2').value.trim();
-
-        if (!team1 || !team2) {
-            alert("Veuillez remplir les deux équipes !");
-            return;
-        }
-
-        if (credits <= 0) {
-            alert("Jetons épuisés !");
-            return;
-        }
-
-        credits--;
-        document.getElementById('credits-count').innerText = credits;
-
-        const homePower = (team1.length % 5) + 3;
-        const awayPower = (team2.length % 5) + 2;
-        const total = homePower + awayPower;
-        
-        const winProb = Math.round((homePower / total) * 100);
-        const winner = winProb > 55 ? team1 : (winProb < 45 ? team2 : "Match Nul");
-        const tip = winProb > 60 ? `Victoire ${team1}` : "Plus de 1.5 Buts";
-
-        document.getElementById('pred-winner').innerText = winner;
-        document.getElementById('pred-percent').innerText = `${winProb}%`;
-        document.getElementById('pred-tip').innerText = tip;
-        document.getElementById('pred-score').innerText = `${Math.max(0, homePower - 2)} - ${Math.max(0, awayPower - 2)}`;
-        document.getElementById('pred-form').innerText = "🟢 🟢 🟠 🟢 🔴";
-
-        document.getElementById('result-card').classList.remove('hidden');
-    });
+    if (tabDirect) {
+        tabDirect.addEventListener('click', () => {
+            loadLiveMatches();
+        });
+    }
 }
-
-// === 3. NAVIGATION ET SÉLECTION ===
-function showSection(sectionName) {
-    document.querySelectorAll('.app-section').forEach(s => s.classList.add('hidden'));
-    document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-
-    const section = document.getElementById(`section-${sectionName}`);
-    if (section) section.classList.remove('hidden');
-
-    const activeTab = document.querySelector(`.tab-item[onclick="showSection('${sectionName}')"]`);
-    if (activeTab) activeTab.classList.add('active');
-}
-
-function selectMatch(teamHome, teamAway, leagueName) {
-    document.getElementById('team1').value = teamHome;
-    document.getElementById('team2').value = teamAway;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-// Exécution au chargement
-fetchFootballData();
