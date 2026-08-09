@@ -61,7 +61,7 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-// Connexion Google via Redirection (Parfait sur mobile)
+// Connexion Google via Redirection
 window.loginWithGoogle = async function() {
     try {
         await signInWithRedirect(auth, googleProvider);
@@ -80,35 +80,55 @@ window.logoutUser = async function() {
     }
 };
 
-// Synchroniser les jetons dans Firestore
+// Synchroniser les jetons dans Firestore (Collection 'users')
 async function syncUserData(user) {
-    const userRef = doc(db, "users", user.uid);
-    const userSnap = await getDoc(userRef);
+    try {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
 
-    if (!userSnap.exists()) {
-        await setDoc(userRef, {
-            email: user.email,
-            credits: 10,
-            createdAt: new Date().toISOString()
-        });
+        if (!userSnap.exists()) {
+            // Création automatique du profil avec 10 jetons
+            await setDoc(userRef, {
+                email: user.email,
+                credits: 10,
+                createdAt: new Date().toISOString()
+            });
+            updateCreditsUI(10);
+        } else {
+            const data = userSnap.data();
+            // Si le champ credits n'existe pas encore
+            if (data.credits === undefined) {
+                await updateDoc(userRef, { credits: 10 });
+                updateCreditsUI(10);
+            } else {
+                updateCreditsUI(data.credits);
+            }
+        }
+    } catch (error) {
+        console.error("Erreur de synchronisation Firestore :", error);
+        // Affichage de secours pour vérifier si l'utilisateur est connecté
         updateCreditsUI(10);
-    } else {
-        const data = userSnap.data();
-        updateCreditsUI(data.credits);
     }
 }
 
-// Déduire 1 jeton
+// Déduire 1 jeton lors d'une analyse
 export async function consumeCredit() {
     if (!currentUser) return false;
 
-    const userRef = doc(db, "users", currentUser.uid);
-    const userSnap = await getDoc(userRef);
+    try {
+        const userRef = doc(db, "users", currentUser.uid);
+        const userSnap = await getDoc(userRef);
 
-    if (userSnap.exists() && userSnap.data().credits > 0) {
-        await updateDoc(userRef, { credits: increment(-1) });
-        updateCreditsUI(userSnap.data().credits - 1);
-        return true;
+        if (userSnap.exists()) {
+            const currentCredits = userSnap.data().credits || 0;
+            if (currentCredits > 0) {
+                await updateDoc(userRef, { credits: increment(-1) });
+                updateCreditsUI(currentCredits - 1);
+                return true;
+            }
+        }
+    } catch (error) {
+        console.error("Erreur lors de la déduction de jeton :", error);
     }
     return false;
 }
