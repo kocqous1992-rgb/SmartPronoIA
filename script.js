@@ -12,47 +12,39 @@ function initApp() {
     setupEventListeners();
 }
 
-// 1. Charger les matchs réels du jour dans la liste HTML
+// 1. Charger les matchs réels
 async function loadRealMatches() {
-    // Sélectionne la zone d'affichage sous "Matchs Réels du Jour"
-    const container = document.querySelector('.card:has(#tab-pronos), .card:nth-of-type(2)') || document.body;
-    
-    // Recherche de la liste des matchs ou création dynamique
-    let listElem = document.getElementById('today-matches-list');
-    if (!listElem) {
-        listElem = document.createElement('div');
-        listElem.id = 'today-matches-list';
-        container.appendChild(listElem);
-    }
+    const container = document.getElementById('matches-container');
+    if (!container) return;
 
-    listElem.innerHTML = `<div style="text-align:center; padding: 15px; color: #94a3b8;">⏳ Chargement des matchs en direct...</div>`;
+    container.innerHTML = `<div style="text-align:center; padding: 15px; color: #94a3b8;">⏳ Chargement des matchs en direct...</div>`;
 
     try {
         const response = await fetch(API_URL);
-        if (!response.ok) throw new Error("Erreur serveur API");
+        if (!response.ok) throw new Error("Erreur API");
 
         const data = await response.json();
         const matches = data.response || [];
 
-        renderMatches(matches, listElem);
+        renderMatches(matches, container);
     } catch (error) {
         console.error("Erreur chargement matchs :", error);
-        listElem.innerHTML = `<div style="text-align:center; padding: 15px; color: #ef4444;">❌ Erreur de chargement des matchs.</div>`;
+        container.innerHTML = `<div style="text-align:center; padding: 15px; color: #ef4444;">❌ Erreur de chargement des matchs.</div>`;
     }
 }
 
-// 2. Générer les éléments de la liste des matchs
+// 2. Afficher la liste des matchs
 function renderMatches(matches, container) {
     if (!matches || matches.length === 0) {
-        container.innerHTML = `<div style="text-align:center; padding: 15px; color: #94a3b8;">Aucun match disponible.</div>`;
+        container.innerHTML = `<div style="text-align:center; padding: 15px; color: #94a3b8;">Aucun match disponible pour le moment.</div>`;
         return;
     }
 
-    // Prendre les 10 premiers matchs réels
+    // Afficher les 10 premiers matchs
     const topMatches = matches.slice(0, 10);
 
     container.innerHTML = topMatches.map(match => {
-        const title = match.title; // Exemple: "Team A vs Team B"
+        const title = match.title; // Format: "Équipe A vs Équipe B"
         const league = match.competition || "Football";
 
         return `
@@ -67,7 +59,7 @@ function renderMatches(matches, container) {
     }).join('');
 }
 
-// 3. Gestion du bouton "Générer l'Analyse (1 Jeton)"
+// 3. Gestion du bouton "Générer l'Analyse"
 async function handleGenerateAnalysis() {
     if (!currentUser) {
         alert("Veuillez vous connecter avec votre compte Google.");
@@ -83,11 +75,18 @@ async function handleGenerateAnalysis() {
     alert("Analyse en cours de génération... (-1 Jeton)");
 }
 
-// 4. Écouteurs d'événements sur les boutons de ton interface
+// 4. Écouteurs d'événements
 function setupEventListeners() {
-    // Bouton bleu "Générer l'Analyse"
-    const generateBtn = document.querySelector('button:contains("Générer"), .btn-primary, button');
-    if (generateBtn) {
-        generateBtn.addEventListener('click', handleGenerateAnalysis);
+    // Bouton de génération
+    const btnGenerate = document.getElementById('btn-generate') || document.querySelector('button');
+    if (btnGenerate) {
+        btnGenerate.addEventListener('click', handleGenerateAnalysis);
     }
+
+    // Onglets de navigation
+    const tabPronos = document.getElementById('tab-pronos');
+    const tabDirect = document.getElementById('tab-direct');
+
+    if (tabPronos) tabPronos.addEventListener('click', () => loadRealMatches());
+    if (tabDirect) tabDirect.addEventListener('click', () => loadRealMatches());
 }

@@ -3,129 +3,222 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Foot Prono Pro</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0f172a">
-    <link href="https://cdn.jsdelivr.net/npm/heroicons@2.0.18/css/heroicons.min.css" rel="stylesheet">
+    <title>SmartPronoIA</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --primary: #38bdf8;
+            --accent: #22c55e;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* En-tête / Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #334155;
+        }
+
+        .logo {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .credits-badge {
+            background: #334155;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .btn-auth {
+            background: var(--primary);
+            color: #000;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        /* Cartes d'interface */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid #334155;
+        }
+
+        .card h3 {
+            margin-top: 0;
+            font-size: 1rem;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Formulaire Sélection */
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: white;
+            box-sizing: border-box;
+            font-size: 0.9rem;
+        }
+
+        .team-inputs {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn-generate {
+            width: 100%;
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        /* Navigation Onglets Bas */
+        .nav-tabs {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #0f172a;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            border-top: 1px solid #334155;
+        }
+
+        .tab-item {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.75rem;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .tab-item.active {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        body {
+            padding-bottom: 60px;
+        }
+    </style>
 </head>
 <body>
-    <header class="app-header">
-        <div class="logo">
-            ⚽ <span>SmartPronoIA</span>
-        </div>
-        
-        <div class="header-right">
-            <!-- Compteur de Jetons -->
-<div class="user-credits">
-    <span id="credits-count">0</span> 🪙 Jetons
-</div>
-            <!-- Boutons de Connexion Firebase -->
-            <div class="user-auth">
-                <button id="btn-login" onclick="loginWithGoogle()" class="btn-auth">🔑 Connexion</button>
-                <button id="btn-logout" onclick="logoutUser()" class="btn-auth hidden">🚪 Déconnexion</button>
+
+    <!-- Header / Authentification -->
+    <header>
+        <div class="logo">⚽ SmartPronoIA</div>
+        <div class="user-section">
+            <div class="credits-badge">
+                <span id="credits-count">0</span> 🪙 Jetons
             </div>
+            <button id="btn-login" class="btn-auth" onclick="window.loginWithGoogle()">🔑 Connexion</button>
+            <button id="btn-logout" class="btn-auth hidden" onclick="window.logoutUser()">🚪 Déconnexion</button>
         </div>
     </header>
 
-    <main class="container">
-
-    <main class="container">
-        <!-- SECTION 1 : PRONOSTICS -->
-        <div id="section-predict" class="app-section">
-            <section class="card">
-                <h2>📊 Sélection Rapide</h2>
-                <div class="form-group">
-                    <label for="league-select" style="font-size: 13px; color: var(--text-muted); margin-bottom: 5px; display: block;">Championnat :</label>
-                    <select id="league-select">
-                        <option value="Ligue 1">⚽ Ligue 1 (France)</option>
-                        <option value="Champions League">🏆 UEFA Champions League</option>
-                        <option value="Premier League">🇬🇧 Premier League (Angleterre)</option>
-                        <option value="La Liga">🇪🇸 La Liga (Espagne)</option>
-                        <option value="Serie A">🇮🇹 Serie A (Italie)</option>
-                        <option value="Bundesliga">🇩🇪 Bundesliga (Allemagne)</option>
-                    </select>
-                </div>
-                <div class="teams-input">
-                    <input type="text" id="team1" placeholder="Domicile" autocomplete="off">
-                    <span class="vs">VS</span>
-                    <input type="text" id="team2" placeholder="Extérieur" autocomplete="off">
-                </div>
-                <button id="btn-predict" class="btn-primary">⚡ Générer l'Analyse (1 Jeton)</button>
-            </section>
-
-            <section id="result-card" class="card result-card hidden">
-                <div class="result-header">
-                    <h3 id="match-title">Analyse du Match</h3>
-                    <span class="badge" id="league-badge">⚽ Ligue 1</span>
-                </div>
-                <div class="stats-grid">
-                    <div class="stat-box">
-                        <span class="stat-label">Vainqueur</span>
-                        <strong id="pred-winner" class="highlight">-</strong>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-label">Fiabilité</span>
-                        <strong id="pred-percent" class="highlight-green">0%</strong>
-                    </div>
-                </div>
-                <div class="prediction-details">
-                    <p>🎯 Conseil Pari : <span id="pred-tip">-</span></p>
-                    <p>📊 Score Probable : <span id="pred-score">-</span></p>
-                    <p>🔥 Forme : <span id="pred-form">-</span></p>
-                </div>
-            </section>
-
-            <section class="card upcoming-matches">
-                <h3>🗓️ Matchs Réels du Jour</h3>
-                <p style="font-size:12px;color:#94a3b8;">Chargement...</p>
-            </section>
+    <!-- Section 1 : Sélection Rapide -->
+    <div class="card">
+        <h3>📊 Sélection Rapide</h3>
+        <div class="form-group">
+            <label for="league-select">Championnat :</label>
+            <select id="league-select">
+                <option value="FL1">⚽ Ligue 1 (France)</option>
+                <option value="CL">🏆 UEFA Champions League</option>
+                <option value="PL">🇬🇧 Premier League (Angleterre)</option>
+                <option value="PD">🇪🇸 La Liga (Espagne)</option>
+                <option value="SA">🇮🇹 Serie A (Italie)</option>
+                <option value="BL1">🇩🇪 Bundesliga (Allemagne)</option>
+            </select>
         </div>
 
-        <!-- SECTION 2 : EN DIRECT -->
-        <div id="section-live" class="app-section hidden">
-            <!-- Injecté dynamiquement par script.js -->
+        <div class="form-group">
+            <div class="team-inputs">
+                <input type="text" id="home-team" placeholder="Domicile">
+                <span style="color: var(--primary); font-weight: bold;">VS</span>
+                <input type="text" id="away-team" placeholder="Extérieur">
+            </div>
         </div>
 
-        <!-- SECTION 3 : COMPTE -->
-        <div id="section-account" class="app-section hidden">
-            <section class="card profile-header">
-                <div class="avatar">U</div>
-                <h2>Utilisateur_734</h2>
-                <p>Mon statut : <span class="badge premium">Premium 🔥</span></p>
-            </section>
-            <section class="card token-options">
-                <h3>💰 Mes Jetons</h3>
-                <div class="token-balance">
-                    <strong>10</strong> 🪙 Jetons Actuels
-                </div>
-                <button class="btn-secondary">Acheter des Jetons</button>
-            </section>
-        </div>
-    </main>
+        <button id="btn-generate" class="btn-generate">⚡ Générer l'Analyse (1 Jeton)</button>
+    </div>
 
-    <!-- TAB BAR -->
-    <nav class="tab-bar">
-        <a href="#" class="tab-item active" onclick="showSection('predict')">
-            <span class="heroicons-mini heroicons-outline_chart-bar icon"></span>
-            Pronos
-        </a>
-        <a href="#" class="tab-item" onclick="showSection('live')">
-            <span class="heroicons-mini heroicons-outline_video-camera icon"></span>
-            Direct
-        </a>
-        <a href="#" class="tab-item" onclick="showSection('account')">
-            <span class="heroicons-mini heroicons-outline_user icon"></span>
-            Compte
-        </a>
+    <!-- Section 2 : Matchs Réels du Jour -->
+    <div class="card">
+        <h3>📅 Matchs Réels du Jour</h3>
+        <div id="matches-container">
+            <div style="text-align:center; padding: 15px; color: var(--text-muted);">⏳ Chargement...</div>
+        </div>
+    </div>
+
+    <!-- Navigation du Bas -->
+    <nav class="nav-tabs">
+        <div id="tab-pronos" class="tab-item active">Pronos</div>
+        <div id="tab-direct" class="tab-item">Direct</div>
+        <div id="tab-compte" class="tab-item">Compte</div>
     </nav>
 
-    <script type="module" src="firebase.js"></script>
-    <script src="script.js"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
-        }
-    </script>
+    <!-- Scripts Module Firebase et App -->
+    <script type="module" src="./firebase.js"></script>
+    <script type="module" src="./script.js"></script>
 </body>
 </html>
