@@ -1,5 +1,5 @@
 import { db, currentUser, consumeCredit } from "./firebase.js";
-import { collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const API_URL = "https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=";
 
@@ -35,8 +35,6 @@ window.switchTab = function(tabName) {
         loadLiveMatches();
     } else if (tabName === 'compte') {
         updateAccountUI();
-    } else if (tabName === 'pronos') {
-        loadHistory();
     }
 };
 
@@ -124,7 +122,7 @@ window.selectMatch = function(home, away) {
     }
 };
 
-// 4. Génération d'Analyse IA + Sauvegarde Firestore
+// 4. Moteur de Génération d'Analyse IA
 async function handleGenerateAnalysis() {
     const homeTeam = document.getElementById('home-team')?.value.trim();
     const awayTeam = document.getElementById('away-team')?.value.trim();
@@ -147,6 +145,7 @@ async function handleGenerateAnalysis() {
         return;
     }
 
+    // Déduction du jeton
     const hasConsumed = await consumeCredit();
 
     if (!hasConsumed && creditElem) {
@@ -154,10 +153,11 @@ async function handleGenerateAnalysis() {
         creditElem.innerText = newTotal;
     }
 
-    generateAIResult(homeTeam, awayTeam);
+    // Générer et afficher directement le résultat
+    generateAndShowResult(homeTeam, awayTeam);
 }
 
-async function generateAIResult(home, away) {
+function generateAndShowResult(home, away) {
     const winProbHome = Math.floor(Math.random() * 30) + 45;
     const winProbAway = Math.floor(Math.random() * 20) + 10;
     const drawProb = 100 - (winProbHome + winProbAway);
@@ -174,20 +174,23 @@ async function generateAIResult(home, away) {
         drawProb,
         goalsPredict,
         confidence,
-        advice,
-        createdAt: new Date().toISOString()
+        advice
     };
 
-    // Sauvegarde dans la sous-collection de l'utilisateur
+    // 1. Afficher immédiatement la carte
+    displayResultCard(analysisData);
+
+    // 2. Sauvegarder dans Firestore en arrière-plan sans bloquer
     if (currentUser) {
         try {
-            await addDoc(collection(db, "users", currentUser.uid, "analyses"), analysisData);
+            addDoc(collection(db, "users", currentUser.uid, "analyses"), {
+                ...analysisData,
+                createdAt: new Date().toISOString()
+            });
         } catch (e) {
-            console.error("Erreur de sauvegarde de l'analyse :", e);
+            console.error("Erreur sauvegarde :", e);
         }
     }
-
-    displayResultCard(analysisData);
 }
 
 function displayResultCard(data) {
@@ -236,24 +239,6 @@ function displayResultCard(data) {
     if (selectCard) {
         selectCard.after(resultCard);
         resultCard.scrollIntoView({ behavior: 'smooth' });
-    }
-}
-
-// 5. Charger l'historique des pronostics
-async function loadHistory() {
-    if (!currentUser) return;
-
-    try {
-        const historyRef = collection(db, "users", currentUser.uid, "analyses");
-        const q = query(historyRef, orderBy("createdAt", "desc"), limit(5));
-        const querySnapshot = await getDocs(q);
-
-        if (!querySnapshot.empty) {
-            const lastDoc = querySnapshot.docs[0].data();
-            displayResultCard(lastDoc);
-        }
-    } catch (e) {
-        console.error("Erreur lors de la récupération de l'historique :", e);
     }
 }
 
