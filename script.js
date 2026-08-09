@@ -1,10 +1,9 @@
 import { db, currentUser, consumeCredit } from "./firebase.js";
 
-// Clé API-Football / Sportsmonks (Remplace si tu as ta propre clé)
+// Clé et configuration Football-Data.org
 const API_KEY = "3e7eafe1ea6045bc97395ef3cdbebf1f"; 
-const API_URL = "https://v3.football.api-sports.io";
+const API_URL = "https://api.football-data.org/v4";
 
-// Initialisation au chargement de la page
 document.addEventListener('DOMContentLoaded', () => {
     initApp();
 });
@@ -14,7 +13,7 @@ function initApp() {
     setupEventListeners();
 }
 
-// Obtenir la date du jour au format YYYY-MM-DD
+// Obtenir la date du jour exacte (YYYY-MM-DD)
 function getTodayDate() {
     const today = new Date();
     const year = today.getFullYear();
@@ -23,30 +22,32 @@ function getTodayDate() {
     return `${year}-${month}-${day}`;
 }
 
-// 1. Charger UNIQUEMENT les matchs du jour
+// 1. Charger UNIQUEMENT les matchs du jour réel
 async function loadTodayMatches() {
     const container = document.getElementById('matches-container');
     if (!container) return;
 
-    container.innerHTML = `<div class="loading">Chargement des matchs du jour...</div>`;
+    container.innerHTML = `<div class="loading" style="text-align:center; padding: 20px; color: #fff;">⏳ Chargement des matchs du jour...</div>`;
 
     const today = getTodayDate();
 
     try {
-        const response = await fetch(`${API_URL}/fixtures?date=${today}`, {
+        const response = await fetch(`${API_URL}/matches?dateFrom=${today}&dateTo=${today}`, {
             method: "GET",
             headers: {
-                "x-apisports-key": API_KEY
+                "X-Auth-Token": API_KEY
             }
         });
 
+        if (!response.ok) throw new Error("Erreur serveur API");
+
         const data = await response.json();
-        const matches = data.response || [];
+        const matches = data.matches || [];
 
         renderMatches(matches, container, "Aucun match prévu aujourd'hui.");
     } catch (error) {
         console.error("Erreur chargement matchs du jour:", error);
-        container.innerHTML = `<div class="error">Impossible de charger les matchs du jour.</div>`;
+        container.innerHTML = `<div class="error" style="text-align:center; padding: 20px; color: #ff4d4d;">❌ Impossible de charger les matchs du jour.</div>`;
     }
 }
 
@@ -55,72 +56,79 @@ async function loadLiveMatches() {
     const container = document.getElementById('matches-container');
     if (!container) return;
 
-    container.innerHTML = `<div class="loading">Recherche des matchs en direct...</div>`;
+    container.innerHTML = `<div class="loading" style="text-align:center; padding: 20px; color: #fff;">⚡ Recherche des matchs en direct...</div>`;
 
     try {
-        const response = await fetch(`${API_URL}/fixtures?live=all`, {
+        const response = await fetch(`${API_URL}/matches?status=IN_PLAY`, {
             method: "GET",
             headers: {
-                "x-apisports-key": API_KEY
+                "X-Auth-Token": API_KEY
             }
         });
 
+        if (!response.ok) throw new Error("Erreur serveur API");
+
         const data = await response.json();
-        const liveMatches = data.response || [];
+        const liveMatches = data.matches || [];
 
         renderMatches(liveMatches, container, "Aucun match actuellement en direct.");
     } catch (error) {
         console.error("Erreur chargement matchs en direct:", error);
-        container.innerHTML = `<div class="error">Impossible de charger les matchs en direct.</div>`;
+        container.innerHTML = `<div class="error" style="text-align:center; padding: 20px; color: #ff4d4d;">❌ Impossible de charger les matchs en direct.</div>`;
     }
 }
 
-// 3. Affichage dynamique des cartes de matchs
+// 3. Rendu HTML des cartes de matchs
 function renderMatches(matches, container, emptyMessage) {
     if (matches.length === 0) {
-        container.innerHTML = `<div class="empty">${emptyMessage}</div>`;
+        container.innerHTML = `<div class="empty" style="text-align:center; padding: 20px; color: #aaa;">${emptyMessage}</div>`;
         return;
     }
 
-    container.innerHTML = matches.map(item => {
-        const fixture = item.fixture;
-        const teams = item.teams;
-        const status = fixture.status.short; // NS = Not Started, 1H/2H = Live, FT = Finished
+    container.innerHTML = matches.map(match => {
+        const homeTeam = match.homeTeam.shortName || match.homeTeam.name;
+        const awayTeam = match.awayTeam.shortName || match.awayTeam.name;
+        const status = match.status; // TIMED, IN_PLAY, FINISHED, PAUSED
+        const league = match.competition.name;
 
-        let statusBadge = `<span class="badge ${status === 'FT' ? 'ft' : 'live'}">${status}</span>`;
+        let statusText = status;
+        if (status === 'IN_PLAY') statusText = '🔴 EN DIRECT';
+        else if (status === 'FINISHED') statusText = 'FT';
+        else if (status === 'TIMED') statusText = 'Programmé';
 
         return `
-            <div class="match-card">
-                <div class="league">${item.league.name} (${item.league.country})</div>
-                <div class="teams">
-                    <span class="team">${teams.home.name}</span>
-                    <span class="vs">VS</span>
-                    <span class="team">${teams.away.name}</span>
+            <div class="match-card" style="background: #1e293b; margin: 10px 0; padding: 12px; border-radius: 8px; color: #fff;">
+                <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px;">${league}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; font-weight: bold;">
+                    <span>${homeTeam}</span>
+                    <span style="color: #38bdf8; font-size: 0.8rem;">VS</span>
+                    <span>${awayTeam}</span>
                 </div>
-                <div class="status-info">${statusBadge}</div>
+                <div style="margin-top: 8px; font-size: 0.75rem; text-align: right; color: #e2e8f0;">
+                    ${statusText}
+                </div>
             </div>
         `;
     }).join('');
 }
 
-// 4. Génération d'analyse IA avec déduction de 1 jeton
+// 4. Gestion de la génération de pronostics avec déduction de jeton
 async function handleGenerateAnalysis() {
     if (!currentUser) {
-        alert("Veuillez vous connecter avec votre compte Google pour générer une analyse.");
+        alert("Veuillez vous connecter avec votre compte Google.");
         return;
     }
 
     const hasCredit = await consumeCredit();
     if (!hasCredit) {
-        alert("Vous n'avez pas assez de jetons. Vous devez recharger votre solde.");
+        alert("Vous n'avez pas assez de jetons !");
         return;
     }
 
-    // Logique de génération des pronostics
-    alert("Analyse en cours de génération avec succès ! (-1 Jeton)");
+    alert("Analyse en cours de génération... (-1 Jeton)");
 }
 
-// Écouteurs d'événements pour les onglets (Pronos, Direct, Générer)
+// 5. Configuration des onglets et boutons
 function setupEventListeners() {
     const btnGenerate = document.getElementById('btn-generate');
     const tabPronos = document.getElementById('tab-pronos');
@@ -131,14 +139,10 @@ function setupEventListeners() {
     }
 
     if (tabPronos) {
-        tabPronos.addEventListener('click', () => {
-            loadTodayMatches();
-        });
+        tabPronos.addEventListener('click', () => loadTodayMatches());
     }
 
     if (tabDirect) {
-        tabDirect.addEventListener('click', () => {
-            loadLiveMatches();
-        });
+        tabDirect.addEventListener('click', () => loadLiveMatches());
     }
 }
