@@ -1,6 +1,6 @@
 import { db, currentUser, consumeCredit } from "./firebase.js";
 
-// API Football gratuite et totalement accessible sans blocage CORS
+// API ScoreBat (Accès 100% gratuit et sans blocage CORS)
 const API_URL = "https://www.scorebat.com/video-api/v3/feed/?token=MTY4NTc1XzE3MjM0Njk2MDNfOGM4M2YxMWRmZjg3YTc3Y2Y4YTYyY2MxZmI4MGFhMmM4YWJmNTM1OQ==";
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -8,16 +8,24 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initApp() {
-    loadTodayMatches();
+    loadRealMatches();
     setupEventListeners();
 }
 
-// 1. Charger les matchs du jour / en direct
-async function loadTodayMatches() {
-    const container = document.getElementById('matches-container');
-    if (!container) return;
+// 1. Charger les matchs réels du jour dans la liste HTML
+async function loadRealMatches() {
+    // Sélectionne la zone d'affichage sous "Matchs Réels du Jour"
+    const container = document.querySelector('.card:has(#tab-pronos), .card:nth-of-type(2)') || document.body;
+    
+    // Recherche de la liste des matchs ou création dynamique
+    let listElem = document.getElementById('today-matches-list');
+    if (!listElem) {
+        listElem = document.createElement('div');
+        listElem.id = 'today-matches-list';
+        container.appendChild(listElem);
+    }
 
-    container.innerHTML = `<div style="text-align:center; padding: 20px; color: #fff;">⏳ Chargement des matchs en direct et du jour...</div>`;
+    listElem.innerHTML = `<div style="text-align:center; padding: 15px; color: #94a3b8;">⏳ Chargement des matchs en direct...</div>`;
 
     try {
         const response = await fetch(API_URL);
@@ -26,42 +34,40 @@ async function loadTodayMatches() {
         const data = await response.json();
         const matches = data.response || [];
 
-        renderMatches(matches, container, "Aucun match disponible pour le moment.");
+        renderMatches(matches, listElem);
     } catch (error) {
         console.error("Erreur chargement matchs :", error);
-        container.innerHTML = `<div style="text-align:center; padding: 20px; color: #ff4d4d;">❌ Impossible de charger les matchs. Vérifie ta connexion.</div>`;
+        listElem.innerHTML = `<div style="text-align:center; padding: 15px; color: #ef4444;">❌ Erreur de chargement des matchs.</div>`;
     }
 }
 
-// 2. Affichage dynamique des cartes
-function renderMatches(matches, container, emptyMessage) {
+// 2. Générer les éléments de la liste des matchs
+function renderMatches(matches, container) {
     if (!matches || matches.length === 0) {
-        container.innerHTML = `<div style="text-align:center; padding: 20px; color: #aaa;">${emptyMessage}</div>`;
+        container.innerHTML = `<div style="text-align:center; padding: 15px; color: #94a3b8;">Aucun match disponible.</div>`;
         return;
     }
 
-    // Afficher les 15 premiers matchs les plus récents
-    const recentMatches = matches.slice(0, 15);
+    // Prendre les 10 premiers matchs réels
+    const topMatches = matches.slice(0, 10);
 
-    container.innerHTML = recentMatches.map(match => {
-        const title = match.title; // Format: "Home vs Away"
+    container.innerHTML = topMatches.map(match => {
+        const title = match.title; // Exemple: "Team A vs Team B"
         const league = match.competition || "Football";
 
         return `
-            <div style="background: #1e293b; margin: 10px 0; padding: 12px; border-radius: 8px; color: #fff;">
-                <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px;">${league}</div>
-                <div style="display: flex; justify-content: space-between; align-items: center; font-weight: bold;">
+            <div style="background: #0f172a; margin: 8px 0; padding: 10px; border-radius: 6px; border: 1px solid #1e293b;">
+                <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 4px;">${league}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; font-weight: 600; color: #f8fafc;">
                     <span>${title}</span>
-                </div>
-                <div style="margin-top: 8px; font-size: 0.75rem; text-align: right; color: #38bdf8;">
-                    🟢 Match vérifié
+                    <span style="background: #22c55e; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem;">EN DIRECT</span>
                 </div>
             </div>
         `;
     }).join('');
 }
 
-// 3. Gestion de l'analyse avec jetons
+// 3. Gestion du bouton "Générer l'Analyse (1 Jeton)"
 async function handleGenerateAnalysis() {
     if (!currentUser) {
         alert("Veuillez vous connecter avec votre compte Google.");
@@ -70,20 +76,18 @@ async function handleGenerateAnalysis() {
 
     const hasCredit = await consumeCredit();
     if (!hasCredit) {
-        alert("Vous n'avez plus de jetons !");
+        alert("Vous n'avez pas assez de jetons !");
         return;
     }
 
-    alert("Analyse générée avec succès ! (-1 Jeton)");
+    alert("Analyse en cours de génération... (-1 Jeton)");
 }
 
-// 4. Écouteurs d'événements
+// 4. Écouteurs d'événements sur les boutons de ton interface
 function setupEventListeners() {
-    const btnGenerate = document.getElementById('btn-generate');
-    const tabPronos = document.getElementById('tab-pronos');
-    const tabDirect = document.getElementById('tab-direct');
-
-    if (btnGenerate) btnGenerate.addEventListener('click', handleGenerateAnalysis);
-    if (tabPronos) tabPronos.addEventListener('click', () => loadTodayMatches());
-    if (tabDirect) tabDirect.addEventListener('click', () => loadTodayMatches());
+    // Bouton bleu "Générer l'Analyse"
+    const generateBtn = document.querySelector('button:contains("Générer"), .btn-primary, button');
+    if (generateBtn) {
+        generateBtn.addEventListener('click', handleGenerateAnalysis);
+    }
 }
