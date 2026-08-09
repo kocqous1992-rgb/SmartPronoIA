@@ -265,5 +265,3 @@ function setupEventListeners() {
     const btnGenerate = document.getElementById('btn-generate');
     if (btnGenerate) {
         btnGenerate.addEventListener('click', handleGenerateAnalysis);
-    }
-}
