@@ -222,6 +222,8 @@ function handleGenerateAnalysis() {
     const winHome = Math.floor(Math.random() * 30) + 45;
     const winAway = Math.floor(Math.random() * 20) + 10;
     const draw = 100 - (winHome + winAway);
+    const confidence = Math.floor(Math.random() * 12) + 82;
+    const goalsPredict = (Math.random() * 1.4 + 1.8).toFixed(1);
     const advice = winHome > 50 ? 'Victoire ' + home : 'Plus de 1.5 Buts';
 
     const analysisData = {
@@ -230,6 +232,8 @@ function handleGenerateAnalysis() {
         winHome,
         winAway,
         draw,
+        confidence,
+        goalsPredict,
         advice,
         date: new Date().toLocaleDateString('fr-FR')
     };
@@ -238,27 +242,63 @@ function handleGenerateAnalysis() {
     displayAIResult(analysisData);
 }
 
+// Design amélioré de la carte de pronostic
 function displayAIResult(data) {
     const existing = document.getElementById('ai-result-card');
     if (existing) existing.remove();
 
     const card = document.createElement('div');
     card.id = 'ai-result-card';
-    card.style.cssText = "background: #1e293b; border: 2px solid #38bdf8; border-radius: 12px; padding: 15px; margin-top: 15px;";
+    card.style.cssText = "background: #1e293b; border: 2px solid #38bdf8; border-radius: 12px; padding: 15px; margin-top: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);";
 
     card.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h4 style="margin:0; color:#38bdf8;">🧠 Pronostic IA</h4>
-            <span style="background:#22c55e; color:#000; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:bold;">Confiance : 85%</span>
+        <!-- Entête -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:6px;">
+                <span style="font-size:1.2rem;">🧠</span>
+                <h4 style="margin:0; color:#38bdf8; font-size:1rem;">Analyse SmartPronoIA</h4>
+            </div>
+            <span style="background:rgba(34, 197, 94, 0.2); color:#22c55e; border: 1px solid #22c55e; padding:3px 10px; border-radius:12px; font-size:0.75rem; font-weight:bold;">
+                Confiance : ${data.confidence}%
+            </span>
         </div>
-        <div style="font-size:0.9rem; font-weight:bold; text-align:center; margin: 10px 0;">
-            ${data.home} <span style="color:#38bdf8;">VS</span> ${data.away}
+
+        <!-- Affiche des Équipes -->
+        <div style="text-align:center; padding: 10px; background:#0f172a; border-radius:8px; margin-bottom:12px; border:1px solid #334155;">
+            <div style="font-size:0.95rem; font-weight:bold; color:#f8fafc;">
+                ${data.home} <span style="color:#38bdf8; margin:0 5px;">VS</span> ${data.away}
+            </div>
         </div>
-        <div style="background:#0f172a; padding:10px; border-radius:8px; font-size:0.8rem; margin-bottom:10px;">
-            <div>Victoire ${data.home} : <strong>${data.winHome}%</strong> | Nul : <strong>${data.draw}%</strong> | Victoire ${data.away} : <strong>${data.winAway}%</strong></div>
+
+        <!-- Section Probabilités & Graphique Visuel -->
+        <div style="background:#0f172a; padding:12px; border-radius:8px; margin-bottom:12px; border:1px solid #334155;">
+            <div style="font-size:0.8rem; font-weight:bold; color:#94a3b8; margin-bottom:8px;">📊 PROBABILITÉS DU MATCH</div>
+            
+            <!-- Barre de progression visuelle globale -->
+            <div style="display:flex; height:10px; border-radius:5px; overflow:hidden; background:#334155; margin-bottom:10px;">
+                <div style="width:${data.winHome}%; background:#38bdf8;" title="Domicile"></div>
+                <div style="width:${data.draw}%; background:#eab308;" title="Nul"></div>
+                <div style="width:${data.winAway}%; background:#ef4444;" title="Extérieur"></div>
+            </div>
+
+            <!-- Détails chiffrés -->
+            <div style="display:flex; justify-content:space-between; font-size:0.75rem;">
+                <div style="color:#38bdf8;">🔵 ${data.home} : <strong>${data.winHome}%</strong></div>
+                <div style="color:#eab308;">🟡 Nul : <strong>${data.draw}%</strong></div>
+                <div style="color:#ef4444;">🔴 ${data.away} : <strong>${data.winAway}%</strong></div>
+            </div>
         </div>
-        <div style="background:#0f172a; padding:10px; border-radius:8px; font-size:0.8rem; color:#22c55e; font-weight:bold;">
-            💡 Conseil : ${data.advice}
+
+        <!-- Conseil et Statistiques -->
+        <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding:12px; border-radius:8px; border-left: 4px solid #22c55e;">
+            <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; font-weight:bold;">🎯 CONSEIL SÉLECTIONNÉ</div>
+            <div style="color:#22c55e; font-size:1rem; font-weight:bold; margin-top:4px;">
+                ${data.advice}
+            </div>
+            <div style="color:#cbd5e1; font-size:0.75rem; margin-top:6px; display:flex; align-items:center; gap:5px;">
+                <span>⚽ Moyenne de buts attendue :</span>
+                <strong style="color:#38bdf8;">${data.goalsPredict} buts</strong>
+            </div>
         </div>
     `;
 
