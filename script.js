@@ -10,6 +10,7 @@ function initApp() {
     loadRealMatches();
     setupEventListeners();
     loadLocalHistory();
+    syncCreditsUI();
 }
 
 function getTodayDate() {
@@ -18,6 +19,23 @@ function getTodayDate() {
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+}
+
+// Synchroniser l'affichage du solde
+function syncCreditsUI() {
+    const savedCredits = localStorage.getItem('smartprono_credits');
+    const credits = savedCredits !== null ? parseInt(savedCredits, 10) : 10;
+    
+    const creditHeader = document.getElementById('credits-count');
+    const creditAccount = document.getElementById('account-credits');
+
+    if (creditHeader) creditHeader.innerText = credits;
+    if (creditAccount) creditAccount.innerText = credits;
+}
+
+function updateCredits(newTotal) {
+    localStorage.setItem('smartprono_credits', newTotal);
+    syncCreditsUI();
 }
 
 // 1. Navigation entre onglets
@@ -32,7 +50,10 @@ window.switchTab = function(tabName) {
     if (targetTab) targetTab.classList.add('active');
 
     if (tabName === 'direct') loadLiveMatches();
-    if (tabName === 'compte') loadLocalHistory();
+    if (tabName === 'compte') {
+        loadLocalHistory();
+        syncCreditsUI();
+    }
 };
 
 // 2. Charger les matchs réels
@@ -98,7 +119,7 @@ window.selectMatch = function(home, away) {
     document.getElementById('away-team').value = away;
 };
 
-// 4. Générer l'Analyse IA + Sauvegarde Locale
+// 4. Générer l'Analyse IA + Déduction Solde
 function handleGenerateAnalysis() {
     const home = document.getElementById('home-team')?.value.trim();
     const away = document.getElementById('away-team')?.value.trim();
@@ -108,19 +129,16 @@ function handleGenerateAnalysis() {
         return;
     }
 
-    const creditElem = document.getElementById('credits-count');
-    let currentCredits = parseInt(creditElem.innerText, 10);
+    const currentCredits = parseInt(document.getElementById('credits-count').innerText, 10);
 
     if (currentCredits <= 0) {
-        alert("Plus de jetons !");
+        alert("Plus de jetons ! Rechargez votre solde dans l'onglet Compte.");
         return;
     }
 
-    // Déduction du jeton
-    creditElem.innerText = currentCredits - 1;
-    document.getElementById('account-credits').innerText = currentCredits - 1;
+    // Déduction
+    updateCredits(currentCredits - 1);
 
-    // Calculs de pronostic
     const winHome = Math.floor(Math.random() * 30) + 45;
     const winAway = Math.floor(Math.random() * 20) + 10;
     const draw = 100 - (winHome + winAway);
@@ -136,10 +154,7 @@ function handleGenerateAnalysis() {
         date: new Date().toLocaleDateString('fr-FR')
     };
 
-    // Sauvegarder dans le navigateur
     saveToLocalHistory(analysisData);
-
-    // Afficher le résultat
     displayAIResult(analysisData);
 }
 
@@ -171,35 +186,46 @@ function displayAIResult(data) {
     card.scrollIntoView({ behavior: 'smooth' });
 }
 
-// 5. Gestion de l'historique local (localStorage)
+// 5. Rechargement de Jetons (Publicité Simulée)
+window.handleRechargeTokens = function() {
+    const btn = document.querySelector('.btn-recharge');
+    if (!btn) return;
+
+    btn.disabled = true;
+    let secondsLeft = 5;
+
+    const interval = setInterval(() => {
+        btn.innerText = `⏳ Visionnage en cours (${secondsLeft}s)...`;
+        secondsLeft--;
+
+        if (secondsLeft < 0) {
+            clearInterval(interval);
+            const currentCredits = parseInt(document.getElementById('credits-count').innerText, 10);
+            updateCredits(currentCredits + 5);
+
+            btn.innerText = `🎬 Obtenir +5 Jetons`;
+            btn.disabled = false;
+            alert("🎉 FÉLICITATIONS ! +5 Jetons ajoutés à votre solde.");
+        }
+    }, 1000);
+};
+
+// 6. Historique local
 function saveToLocalHistory(item) {
     let history = JSON.parse(localStorage.getItem('smartprono_history')) || [];
-    history.unshift(item); // Ajouter en premier
-    if (history.length > 10) history.pop(); // Garder 10 max
+    history.unshift(item);
+    if (history.length > 10) history.pop();
     localStorage.setItem('smartprono_history', JSON.stringify(history));
 }
 
 function loadLocalHistory() {
     let historyContainer = document.getElementById('history-container');
-    
-    // Créer le conteneur dans la section Compte si absent
-    if (!historyContainer) {
-        const accountCard = document.querySelector('#section-compte .card');
-        if (accountCard) {
-            const histCard = document.createElement('div');
-            histCard.className = 'card';
-            histCard.innerHTML = `<h3>📜 Mes Dernières Analyses</h3><div id="history-container"></div>`;
-            accountCard.after(histCard);
-            historyContainer = document.getElementById('history-container');
-        }
-    }
-
     if (!historyContainer) return;
 
     let history = JSON.parse(localStorage.getItem('smartprono_history')) || [];
 
     if (history.length === 0) {
-        historyContainer.innerHTML = `<div style="text-align:center; padding: 10px; color: #94a3b8; font-size: 0.85rem;">Aucune analyse enregistrée pour le moment.</div>`;
+        historyContainer.innerHTML = `<div style="text-align:center; padding: 10px; color: #94a3b8; font-size: 0.85rem;">Aucune analyse enregistrée.</div>`;
         return;
     }
 
@@ -214,4 +240,10 @@ function loadLocalHistory() {
 
 function setupEventListeners() {
     document.getElementById('btn-generate')?.addEventListener('click', handleGenerateAnalysis);
+    
+    // Attacher l'événement sur le bouton de rechargement
+    const btnRecharge = document.querySelector('.btn-recharge');
+    if (btnRecharge) {
+        btnRecharge.onclick = window.handleRechargeTokens;
+    }
 }
