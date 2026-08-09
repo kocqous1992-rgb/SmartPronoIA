@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function initApp() {
     loadRealMatches();
     setupEventListeners();
+    loadLocalHistory();
 }
 
 function getTodayDate() {
@@ -31,6 +32,7 @@ window.switchTab = function(tabName) {
     if (targetTab) targetTab.classList.add('active');
 
     if (tabName === 'direct') loadLiveMatches();
+    if (tabName === 'compte') loadLocalHistory();
 };
 
 // 2. Charger les matchs réels
@@ -96,7 +98,7 @@ window.selectMatch = function(home, away) {
     document.getElementById('away-team').value = away;
 };
 
-// 4. Générer l'Analyse IA
+// 4. Générer l'Analyse IA + Sauvegarde Locale
 function handleGenerateAnalysis() {
     const home = document.getElementById('home-team')?.value.trim();
     const away = document.getElementById('away-team')?.value.trim();
@@ -118,17 +120,32 @@ function handleGenerateAnalysis() {
     creditElem.innerText = currentCredits - 1;
     document.getElementById('account-credits').innerText = currentCredits - 1;
 
-    // Affichage de l'analyse
-    displayAIResult(home, away);
-}
-
-function displayAIResult(home, away) {
-    const existing = document.getElementById('ai-result-card');
-    if (existing) existing.remove();
-
+    // Calculs de pronostic
     const winHome = Math.floor(Math.random() * 30) + 45;
     const winAway = Math.floor(Math.random() * 20) + 10;
     const draw = 100 - (winHome + winAway);
+    const advice = winHome > 50 ? 'Victoire ' + home : 'Plus de 1.5 Buts';
+
+    const analysisData = {
+        home,
+        away,
+        winHome,
+        winAway,
+        draw,
+        advice,
+        date: new Date().toLocaleDateString('fr-FR')
+    };
+
+    // Sauvegarder dans le navigateur
+    saveToLocalHistory(analysisData);
+
+    // Afficher le résultat
+    displayAIResult(analysisData);
+}
+
+function displayAIResult(data) {
+    const existing = document.getElementById('ai-result-card');
+    if (existing) existing.remove();
 
     const card = document.createElement('div');
     card.id = 'ai-result-card';
@@ -140,18 +157,59 @@ function displayAIResult(home, away) {
             <span style="background:#22c55e; color:#000; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:bold;">Confiance : 85%</span>
         </div>
         <div style="font-size:0.9rem; font-weight:bold; text-align:center; margin: 10px 0;">
-            ${home} <span style="color:#38bdf8;">VS</span> ${away}
+            ${data.home} <span style="color:#38bdf8;">VS</span> ${data.away}
         </div>
         <div style="background:#0f172a; padding:10px; border-radius:8px; font-size:0.8rem; margin-bottom:10px;">
-            <div>Victoire ${home} : <strong>${winHome}%</strong> | Nul : <strong>${draw}%</strong> | Victoire ${away} : <strong>${winAway}%</strong></div>
+            <div>Victoire ${data.home} : <strong>${data.winHome}%</strong> | Nul : <strong>${data.draw}%</strong> | Victoire ${data.away} : <strong>${data.winAway}%</strong></div>
         </div>
         <div style="background:#0f172a; padding:10px; border-radius:8px; font-size:0.8rem; color:#22c55e; font-weight:bold;">
-            💡 Conseil : ${winHome > 50 ? 'Victoire ' + home : 'Plus de 1.5 Buts'}
+            💡 Conseil : ${data.advice}
         </div>
     `;
 
     document.querySelector('.card').after(card);
     card.scrollIntoView({ behavior: 'smooth' });
+}
+
+// 5. Gestion de l'historique local (localStorage)
+function saveToLocalHistory(item) {
+    let history = JSON.parse(localStorage.getItem('smartprono_history')) || [];
+    history.unshift(item); // Ajouter en premier
+    if (history.length > 10) history.pop(); // Garder 10 max
+    localStorage.setItem('smartprono_history', JSON.stringify(history));
+}
+
+function loadLocalHistory() {
+    let historyContainer = document.getElementById('history-container');
+    
+    // Créer le conteneur dans la section Compte si absent
+    if (!historyContainer) {
+        const accountCard = document.querySelector('#section-compte .card');
+        if (accountCard) {
+            const histCard = document.createElement('div');
+            histCard.className = 'card';
+            histCard.innerHTML = `<h3>📜 Mes Dernières Analyses</h3><div id="history-container"></div>`;
+            accountCard.after(histCard);
+            historyContainer = document.getElementById('history-container');
+        }
+    }
+
+    if (!historyContainer) return;
+
+    let history = JSON.parse(localStorage.getItem('smartprono_history')) || [];
+
+    if (history.length === 0) {
+        historyContainer.innerHTML = `<div style="text-align:center; padding: 10px; color: #94a3b8; font-size: 0.85rem;">Aucune analyse enregistrée pour le moment.</div>`;
+        return;
+    }
+
+    historyContainer.innerHTML = history.map(item => `
+        <div style="background: #0f172a; border: 1px solid #334155; padding: 10px; border-radius: 8px; margin-bottom: 8px;">
+            <div style="font-weight: bold; font-size: 0.85rem; color: #38bdf8;">${item.home} VS ${item.away}</div>
+            <div style="font-size: 0.8rem; color: #22c55e; font-weight: 500; margin-top: 2px;">💡 ${item.advice}</div>
+            <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 2px;">Généré le ${item.date}</div>
+        </div>
+    `).join('');
 }
 
 function setupEventListeners() {
