@@ -18,6 +18,8 @@ const MATCHES_DATA = [
     { home: "Al Ahly", away: "Zamalek", league: "🌍 Ligue des Champions CAF" }
 ];
 
+let couponList = [];
+
 document.addEventListener('DOMContentLoaded', () => {
     populateLeagueSelect();
     renderMatchesList();
@@ -37,16 +39,66 @@ function renderMatchesList() {
 
     const html = MATCHES_DATA.map(m => `
         <div style="background: #0f172a; margin: 8px 0; padding: 10px; border-radius: 6px; border: 1px solid #334155; display:flex; justify-content:space-between; align-items:center;">
-            <div>
+            <div style="flex:1; cursor:pointer;" onclick="selectMatch('${m.home}', '${m.away}')">
                 <div style="font-size: 0.75rem; color: #94a3b8;">${m.league}</div>
                 <div style="font-size: 0.85rem; font-weight: 600;">${m.home} <span style="color: #38bdf8;">VS</span> ${m.away}</div>
             </div>
-            <button onclick="selectMatch('${m.home}', '${m.away}')" style="background:#334155; color:#38bdf8; border:1px solid #38bdf8; padding:5px 10px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Choisir</button>
+            <div style="display:flex; gap:5px;">
+                <button onclick="selectMatch('${m.home}', '${m.away}')" style="background:#334155; color:#38bdf8; border:1px solid #38bdf8; padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Choisir</button>
+                <button onclick="addToCoupon('${m.home}', '${m.away}')" style="background:#eab308; color:#000; border:none; padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">+ Ticket</button>
+            </div>
         </div>
     `).join('');
 
     if (container) container.innerHTML = html;
     if (liveContainer) liveContainer.innerHTML = html;
+}
+
+window.addToCoupon = function(home, away) {
+    if (couponList.length >= 4) return alert("Maximum 4 matchs par coupon.");
+    if (couponList.some(item => item.home === home && item.away === away)) return alert("Match déjà dans le ticket.");
+
+    const odds = (Math.random() * 0.4 + 1.35).toFixed(2);
+    const adviceOptions = [`Victoire ${home}`, 'Plus de 1.5 Buts', 'Les deux équipes marquant'];
+    const advice = adviceOptions[Math.floor(Math.random() * adviceOptions.length)];
+
+    couponList.push({ home, away, odds, advice });
+    renderCouponUI();
+};
+
+window.removeFromCoupon = function(index) {
+    couponList.splice(index, 1);
+    renderCouponUI();
+};
+
+function renderCouponUI() {
+    const wrapper = document.getElementById('coupon-wrapper');
+    if (!wrapper) return;
+
+    if (couponList.length === 0) {
+        wrapper.innerHTML = '';
+        return;
+    }
+
+    const totalOdds = couponList.reduce((acc, m) => acc * parseFloat(m.odds), 1).toFixed(2);
+
+    wrapper.innerHTML = `
+        <div class="card" style="border: 2px solid #eab308; background: #1e293b;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h4 style="margin:0; color:#eab308;">🎟️ Coupon Combiné (${couponList.length}/4)</h4>
+                <span style="font-size:0.85rem;">Cote Totale : <strong style="color:#22c55e; font-size:1.1rem;">${totalOdds}</strong></span>
+            </div>
+            ${couponList.map((m, i) => `
+                <div style="background:#0f172a; padding:8px; border-radius:6px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; border:1px solid #334155;">
+                    <div>
+                        <div><strong>${m.home} VS ${m.away}</strong></div>
+                        <div style="color:#22c55e;">💡 ${m.advice} (Cote : ${m.odds})</div>
+                    </div>
+                    <button onclick="removeFromCoupon(${i})" style="background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; cursor:pointer;">❌</button>
+                </div>
+            `).join('')}
+        </div>
+    `;
 }
 
 window.selectMatch = function(home, away) {
