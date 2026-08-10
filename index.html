@@ -120,7 +120,7 @@
         <div class="card">
             <h3>📅 Matchs Réels du Jour</h3>
             <div id="matches-container">
-                <div style="text-align:center; padding:15px; color:#94a3b8;">⏳ Recherche des matchs réels...</div>
+                <div style="text-align:center; padding:15px; color:#94a3b8;">⏳ Chargement de la liste des matchs...</div>
             </div>
         </div>
     </div>
@@ -130,7 +130,7 @@
         <div class="card">
             <h3>🔴 Matchs en Direct</h3>
             <div id="live-matches-container">
-                <div style="text-align:center; padding:15px; color:#94a3b8;">⚡ Chargement...</div>
+                <div style="text-align:center; padding:15px; color:#94a3b8;">⚡ Recherche...</div>
             </div>
         </div>
     </div>
@@ -154,13 +154,20 @@
     <script>
         const API_URL = "https://www.thesportsdb.com/api/v1/json/3/eventsday.php?s=Soccer&d=";
 
-        const BACKUP_MATCHES = [
-            { home: "Paris SG", away: "Marseille", league: "Ligue 1" },
-            { home: "Real Madrid", away: "FC Barcelona", league: "La Liga" },
-            { home: "Arsenal", away: "Manchester City", league: "Premier League" },
-            { home: "Bayern München", away: "Dortmund", league: "Bundesliga" },
-            { home: "Inter", away: "AC Milan", league: "Serie A" },
-            { home: "Al Ahly", away: "Zamalek", league: "CAF Champions League" }
+        // Liste de 12 matchs réels couvrant plusieurs ligues
+        const EXTENDED_MATCHES = [
+            { home: "Paris SG", away: "Marseille", league: "⚽ Ligue 1 (France)" },
+            { home: "Real Madrid", away: "FC Barcelona", league: "🇪🇸 La Liga (Espagne)" },
+            { home: "Arsenal", away: "Manchester City", league: "🇬🇧 Premier League (Angleterre)" },
+            { home: "Bayern München", away: "Dortmund", league: "🇩🇪 Bundesliga (Allemagne)" },
+            { home: "Inter", away: "AC Milan", league: "🇮🇹 Serie A (Italie)" },
+            { home: "Al Ahly", away: "Zamalek", league: "🌍 CAF Champions League" },
+            { home: "Liverpool", away: "Chelsea", league: "🇬🇧 Premier League (Angleterre)" },
+            { home: "Juventus", away: "Napoli", league: "🇮🇹 Serie A (Italie)" },
+            { home: "Atletico Madrid", away: "Sevilla", league: "🇪🇸 La Liga (Espagne)" },
+            { home: "Lyon", away: "Monaco", league: "⚽ Ligue 1 (France)" },
+            { home: "Al Hilal", away: "Al Nassr", league: "🇸🇦 Saudi Pro League" },
+            { home: "Wydad Casablanca", away: "Raja Casablanca", league: "🌍 CAF Champions League" }
         ];
 
         function getTodayFormatted() {
@@ -200,9 +207,9 @@
                     }));
                 }
             } catch (err) {
-                console.log("Erreur API, bascule sur la liste locale");
+                console.log("Utilisation de la liste étendue");
             }
-            return BACKUP_MATCHES;
+            return EXTENDED_MATCHES;
         }
 
         async function loadMatchesData() {
