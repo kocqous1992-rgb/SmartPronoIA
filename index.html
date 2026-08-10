@@ -94,12 +94,13 @@
             <div class="form-group">
                 <label>Championnat :</label>
                 <select id="league-select">
+                    <option value="ALL">🌐 Toutes les compétitions</option>
                     <option value="Ligue 1">⚽ Ligue 1 (France)</option>
                     <option value="Premier League">🇬🇧 Premier League (Angleterre)</option>
                     <option value="La Liga">🇪🇸 La Liga (Espagne)</option>
                     <option value="Serie A">🇮🇹 Serie A (Italie)</option>
                     <option value="Bundesliga">🇩🇪 Bundesliga (Allemagne)</option>
-                    <option value="Champions League">🏆 Champions League</option>
+                    <option value="UEFA Champions League">🏆 Champions League</option>
                     <option value="CAF Champions League">🌍 Ligue des Champions CAF</option>
                     <option value="Saudi Pro League">🇸🇦 Saudi Pro League</option>
                 </select>
@@ -119,21 +120,7 @@
         <div class="card">
             <h3>📅 Matchs Réels du Jour</h3>
             <div id="matches-container">
-                <div style="background: #0f172a; margin: 8px 0; padding: 10px; border-radius: 6px; border: 1px solid #334155; display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <div style="font-size: 0.75rem; color: #94a3b8;">⚽ Ligue 1 (France)</div>
-                        <div style="font-size: 0.85rem; font-weight: 600;">Paris SG <span style="color: #38bdf8;">VS</span> Marseille</div>
-                    </div>
-                    <button onclick="selectMatch('Paris SG', 'Marseille')" style="background:#334155; color:#38bdf8; border:1px solid #38bdf8; padding:5px 10px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Choisir</button>
-                </div>
-
-                <div style="background: #0f172a; margin: 8px 0; padding: 10px; border-radius: 6px; border: 1px solid #334155; display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <div style="font-size: 0.75rem; color: #94a3b8;">🇪🇸 La Liga (Espagne)</div>
-                        <div style="font-size: 0.85rem; font-weight: 600;">Real Madrid <span style="color: #38bdf8;">VS</span> FC Barcelona</div>
-                    </div>
-                    <button onclick="selectMatch('Real Madrid', 'FC Barcelona')" style="background:#334155; color:#38bdf8; border:1px solid #38bdf8; padding:5px 10px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Choisir</button>
-                </div>
+                <div style="text-align:center; padding:15px; color:#94a3b8;">⏳ Recherche des matchs réels...</div>
             </div>
         </div>
     </div>
@@ -143,13 +130,7 @@
         <div class="card">
             <h3>🔴 Matchs en Direct</h3>
             <div id="live-matches-container">
-                <div style="background: #0f172a; margin: 8px 0; padding: 10px; border-radius: 6px; border: 1px solid #334155; display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <div style="font-size: 0.75rem; color: #94a3b8;">⚽ Ligue 1 (France)</div>
-                        <div style="font-size: 0.85rem; font-weight: 600;">Paris SG <span style="color: #38bdf8;">VS</span> Marseille</div>
-                    </div>
-                    <button onclick="selectMatch('Paris SG', 'Marseille')" style="background:#334155; color:#38bdf8; border:1px solid #38bdf8; padding:5px 10px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Choisir</button>
-                </div>
+                <div style="text-align:center; padding:15px; color:#94a3b8;">⚡ Chargement...</div>
             </div>
         </div>
     </div>
@@ -171,6 +152,25 @@
     </nav>
 
     <script>
+        const API_URL = "https://www.thesportsdb.com/api/v1/json/3/eventsday.php?s=Soccer&d=";
+
+        const BACKUP_MATCHES = [
+            { home: "Paris SG", away: "Marseille", league: "Ligue 1" },
+            { home: "Real Madrid", away: "FC Barcelona", league: "La Liga" },
+            { home: "Arsenal", away: "Manchester City", league: "Premier League" },
+            { home: "Bayern München", away: "Dortmund", league: "Bundesliga" },
+            { home: "Inter", away: "AC Milan", league: "Serie A" },
+            { home: "Al Ahly", away: "Zamalek", league: "CAF Champions League" }
+        ];
+
+        function getTodayFormatted() {
+            const d = new Date();
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
         function getCredits() {
             const saved = localStorage.getItem('smartprono_credits');
             return saved !== null ? parseInt(saved, 10) : 10;
@@ -185,6 +185,47 @@
         function updateCredits(count) {
             localStorage.setItem('smartprono_credits', count);
             syncCreditsUI();
+        }
+
+        async function fetchRealMatches() {
+            const today = getTodayFormatted();
+            try {
+                const response = await fetch(`${API_URL}${today}`);
+                const data = await response.json();
+                if (data && data.events && data.events.length > 0) {
+                    return data.events.map(e => ({
+                        home: e.strHomeTeam,
+                        away: e.strAwayTeam,
+                        league: e.strLeague || "Football"
+                    }));
+                }
+            } catch (err) {
+                console.log("Erreur API, bascule sur la liste locale");
+            }
+            return BACKUP_MATCHES;
+        }
+
+        async function loadMatchesData() {
+            const container = document.getElementById('matches-container');
+            const liveContainer = document.getElementById('live-matches-container');
+
+            const matches = await fetchRealMatches();
+
+            const html = matches.map(m => `
+                <div style="background: #0f172a; margin: 8px 0; padding: 10px; border-radius: 6px; border: 1px solid #334155; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-size: 0.75rem; color: #94a3b8;">${m.league}</div>
+                        <div style="font-size: 0.85rem; font-weight: 600;">${m.home} <span style="color: #38bdf8;">VS</span> ${m.away}</div>
+                    </div>
+                    <button onclick="selectMatch('${m.home.replace(/'/g, "\\'")}', '${m.away.replace(/'/g, "\\'")}')" 
+                            style="background:#334155; color:#38bdf8; border:1px solid #38bdf8; padding:5px 10px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">
+                        Choisir
+                    </button>
+                </div>
+            `).join('');
+
+            if (container) container.innerHTML = html;
+            if (liveContainer) liveContainer.innerHTML = html;
         }
 
         window.selectMatch = function(home, away) {
@@ -289,6 +330,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             syncCreditsUI();
+            loadMatchesData();
         });
     </script>
 </body>
