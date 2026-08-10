@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderMatchesList();
     syncCreditsUI();
     setupEventListeners();
+    loadHistoryUI();
 });
 
 function populateLeagueSelect() {
@@ -116,6 +117,8 @@ window.switchTab = function(tabName) {
 
     if (targetSection) targetSection.classList.add('active');
     if (targetTab) targetTab.classList.add('active');
+
+    if (tabName === 'compte') loadHistoryUI();
 };
 
 function getCredits() {
@@ -157,6 +160,9 @@ function handleGenerateAnalysis() {
     const confidence = Math.floor(Math.random() * 10) + 85;
     const goalsPredict = (Math.random() * 1.2 + 1.8).toFixed(1);
     const advice = winHome > 55 ? 'Victoire ' + home : 'Plus de 1.5 Buts';
+
+    // OPTION C : SAUVEGARDER L'ANALYSE DANS L'HISTORIQUE
+    saveAnalysisToHistory({ home, away, advice, confidence, date: new Date().toLocaleDateString('fr-FR') });
 
     const oldCard = document.getElementById('ai-result-card');
     if (oldCard) oldCard.remove();
@@ -212,13 +218,53 @@ function handleGenerateAnalysis() {
     card.scrollIntoView({ behavior: 'smooth' });
 }
 
+// FONCTIONS HISTORIQUE (OPTION C)
+function saveAnalysisToHistory(item) {
+    let history = JSON.parse(localStorage.getItem('smartprono_history')) || [];
+    history.unshift(item);
+    if (history.length > 5) history.pop();
+    localStorage.setItem('smartprono_history', JSON.stringify(history));
+}
+
+function loadHistoryUI() {
+    const container = document.getElementById('history-container');
+    if (!container) return;
+
+    let history = JSON.parse(localStorage.getItem('smartprono_history')) || [];
+    if (history.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:10px; color:#94a3b8; font-size:0.85rem;">Aucune analyse enregistrée.</div>`;
+        return;
+    }
+
+    container.innerHTML = history.map(h => `
+        <div style="background:#0f172a; border:1px solid #334155; padding:8px 10px; border-radius:6px; margin-bottom:6px;">
+            <div style="font-weight:bold; font-size:0.85rem; color:#38bdf8;">${h.home} VS ${h.away}</div>
+            <div style="font-size:0.8rem; color:#22c55e;">💡 ${h.advice} (${h.confidence}% Confiance)</div>
+            <div style="font-size:0.7rem; color:#94a3b8;">Généré le ${h.date}</div>
+        </div>
+    `).join('');
+}
+
+// SIMULATION RECHARGE PUB (OPTION D)
 function setupEventListeners() {
     document.getElementById('btn-generate')?.addEventListener('click', handleGenerateAnalysis);
-    const btnRecharge = document.querySelector('.btn-recharge');
-    if (btnRecharge) {
-        btnRecharge.onclick = () => {
-            updateCredits(getCredits() + 5);
-            alert("🎉 +5 Jetons ajoutés à votre solde !");
+    
+    const btnRechargeAd = document.getElementById('btn-recharge-ad');
+    if (btnRechargeAd) {
+        btnRechargeAd.onclick = () => {
+            btnRechargeAd.disabled = true;
+            let timer = 5;
+            const interval = setInterval(() => {
+                btnRechargeAd.innerText = `⏳ Visionnage de la pub (${timer}s)...`;
+                timer--;
+                if (timer < 0) {
+                    clearInterval(interval);
+                    updateCredits(getCredits() + 5);
+                    btnRechargeAd.innerText = `🎬 Regarder une pub (+5 Jetons)`;
+                    btnRechargeAd.disabled = false;
+                    alert("🎉 FÉLICITATIONS ! +5 Jetons ont été crédités.");
+                }
+            }, 1000);
         };
     }
 }
