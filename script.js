@@ -161,7 +161,6 @@ function handleGenerateAnalysis() {
     const goalsPredict = (Math.random() * 1.2 + 1.8).toFixed(1);
     const advice = winHome > 55 ? 'Victoire ' + home : 'Plus de 1.5 Buts';
 
-    // OPTION C : SAUVEGARDER L'ANALYSE DANS L'HISTORIQUE
     saveAnalysisToHistory({ home, away, advice, confidence, date: new Date().toLocaleDateString('fr-FR') });
 
     const oldCard = document.getElementById('ai-result-card');
@@ -218,7 +217,6 @@ function handleGenerateAnalysis() {
     card.scrollIntoView({ behavior: 'smooth' });
 }
 
-// FONCTIONS HISTORIQUE (OPTION C)
 function saveAnalysisToHistory(item) {
     let history = JSON.parse(localStorage.getItem('smartprono_history')) || [];
     history.unshift(item);
@@ -245,7 +243,6 @@ function loadHistoryUI() {
     `).join('');
 }
 
-// SIMULATION RECHARGE PUB (OPTION D)
 function setupEventListeners() {
     document.getElementById('btn-generate')?.addEventListener('click', handleGenerateAnalysis);
     
