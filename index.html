@@ -89,24 +89,6 @@
 
     <!-- SECTION PRONOS -->
     <div id="section-pronos" class="page-section active">
-        
-        <!-- OPTION B : BLOC VIP -->
-        <div class="card" style="border: 2px solid #eab308; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <h3 style="margin:0; color:#eab308;">🔥 Top Pronos VIP du Jour</h3>
-                <span style="background:#eab308; color:#000; font-size:0.7rem; font-weight:bold; padding:2px 8px; border-radius:10px;">95% Confiance</span>
-            </div>
-            <div id="vip-container">
-                <div style="background: #0f172a; padding: 8px 10px; border-radius: 6px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #334155;">
-                    <div>
-                        <div style="font-size: 0.85rem; font-weight: bold;">Paris SG VS Marseille</div>
-                        <div style="font-size: 0.75rem; color: #22c55e; font-weight: bold;">💡 Conseil : Victoire Paris SG</div>
-                    </div>
-                    <button onclick="selectMatch('Paris SG', 'Marseille')" style="background:#eab308; color:#000; font-weight:bold; border:none; border-radius:4px; padding:4px 8px; font-size:0.7rem; cursor:pointer;">Analyser</button>
-                </div>
-            </div>
-        </div>
-
         <!-- EMPLACEMENT DU COUPON COMBINÉ -->
         <div id="coupon-wrapper"></div>
 
@@ -136,6 +118,32 @@
         </div>
     </div>
 
+    <!-- SECTION VIP -->
+    <div id="section-vip" class="page-section">
+        <div class="card" style="border: 2px solid #eab308; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="margin:0; color:#eab308;">🔥 Pronostics VIP (95% Confiance)</h3>
+                <span style="background:#eab308; color:#000; font-size:0.7rem; font-weight:bold; padding:2px 8px; border-radius:10px;">PRO</span>
+            </div>
+            <div id="vip-matches-list">
+                <div style="background: #0f172a; padding: 10px; border-radius: 6px; margin-top: 8px; border: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-size: 0.85rem; font-weight: bold;">Paris SG VS Marseille</div>
+                        <div style="font-size: 0.75rem; color: #22c55e; font-weight: bold; margin-top: 2px;">💡 Conseil : Victoire Paris SG</div>
+                    </div>
+                    <button onclick="selectMatch('Paris SG', 'Marseille')" style="background:#eab308; color:#000; font-weight:bold; border:none; border-radius:4px; padding:6px 10px; font-size:0.75rem; cursor:pointer;">Choisir</button>
+                </div>
+                <div style="background: #0f172a; padding: 10px; border-radius: 6px; margin-top: 8px; border: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-size: 0.85rem; font-weight: bold;">Real Madrid VS FC Barcelona</div>
+                        <div style="font-size: 0.75rem; color: #22c55e; font-weight: bold; margin-top: 2px;">💡 Conseil : Plus de 2.5 Buts</div>
+                    </div>
+                    <button onclick="selectMatch('Real Madrid', 'FC Barcelona')" style="background:#eab308; color:#000; font-weight:bold; border:none; border-radius:4px; padding:6px 10px; font-size:0.75rem; cursor:pointer;">Choisir</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- SECTION DIRECT -->
     <div id="section-direct" class="page-section">
         <div class="card">
@@ -153,7 +161,6 @@
             <p style="font-size: 0.9rem;">Solde actuel : <strong id="account-credits">10</strong> Jetons</p>
         </div>
 
-        <!-- OPTION C : HISTORIQUE -->
         <div class="card">
             <h3>📜 Mes Dernières Analyses</h3>
             <div id="history-container">
@@ -161,7 +168,6 @@
             </div>
         </div>
 
-        <!-- OPTION D : PUB RECHARGE -->
         <div class="card">
             <h3>🪙 Recharger des Jetons</h3>
             <p style="font-size:0.8rem; color:#94a3b8;">Visionnez une vidéo sponsorisée pour créditer +5 jetons.</p>
@@ -172,6 +178,7 @@
     <!-- MENU DU BAS -->
     <nav class="nav-tabs">
         <div id="tab-pronos" class="tab-item active" onclick="switchTab('pronos')">Pronos</div>
+        <div id="tab-vip" class="tab-item" onclick="switchTab('vip')">⭐ VIP</div>
         <div id="tab-direct" class="tab-item" onclick="switchTab('direct')">Direct</div>
         <div id="tab-compte" class="tab-item" onclick="switchTab('compte')">Compte</div>
     </nav>
