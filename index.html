@@ -7,51 +7,156 @@
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#0f172a">
     <style>
-        body { font-family: sans-serif; background-color: #0f172a; color: white; padding: 15px; margin: 0; }
-        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 10px; }
-        .logo { color: #38bdf8; font-weight: bold; font-size: 1.2rem; }
-        .card { background: #1e293b; padding: 15px; border-radius: 10px; margin-top: 15px; border: 1px solid #334155; }
-        input, select { width: 100%; padding: 10px; margin: 5px 0 10px 0; border-radius: 5px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
-        .match-item { background: #0f172a; padding: 10px; border-radius: 5px; margin: 5px 0; display: flex; justify-content: space-between; align-items: center; border: 1px solid #334155; }
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --primary: #38bdf8;
+            --accent: #22c55e;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --inner-bg: #0f172a;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 15px;
+            padding-bottom: 70px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 15px;
+        }
+
+        .logo { font-size: 1.1rem; font-weight: bold; color: var(--primary); }
+        .user-badge { background: var(--border-color); padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 15px;
+        }
+
+        .card h3 { margin-top: 0; font-size: 1rem; }
+
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px; }
+        select, input {
+            width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);
+            background: var(--inner-bg); color: var(--text-color); box-sizing: border-box; font-size: 0.9rem;
+        }
+
+        .team-inputs { display: flex; gap: 10px; align-items: center; }
+
+        .btn-generate {
+            width: 100%; background: #2563eb; color: white; border: none; padding: 12px;
+            border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer; margin-top: 10px;
+        }
+
+        .btn-recharge {
+            width: 100%; background: var(--accent); color: #000; border: none; padding: 10px;
+            border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px;
+        }
+
+        .page-section { display: none; }
+        .page-section.active { display: block; }
+
+        .nav-tabs {
+            position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-color);
+            display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid var(--border-color); z-index: 1000;
+        }
+
+        .tab-item { color: var(--text-muted); font-size: 0.85rem; text-align: center; cursor: pointer; flex: 1; }
+        .tab-item.active { color: var(--primary); font-weight: bold; }
     </style>
 </head>
 <body>
 
     <header>
         <div class="logo">⚽ SmartPronoIA</div>
-        <div>🪙 <span id="credits-count">10</span> Jetons</div>
+        <div class="user-badge">🪙 <span id="credits-count">10</span> Jetons</div>
     </header>
 
-    <div class="card">
-        <h3>📊 Sélection Rapide</h3>
-        <label>Championnat</label>
-        <select id="league-select">
-            <option>Ligue 1 (France)</option>
-            <option>Premier League (Angleterre)</option>
-            <option>La Liga (Espagne)</option>
-            <option>UEFA Champions League</option>
-        </select>
-        
-        <input type="text" id="home-team" placeholder="Équipe Domicile">
-        <input type="text" id="away-team" placeholder="Équipe Extérieur">
-        
-        <button id="btn-generate">⚡ Générer l'Analyse (1 Jeton)</button>
-    </div>
-
-    <div class="card">
-        <h3>📅 Matchs Réels du Jour</h3>
-        <div id="matches-container">
-            <div class="match-item">
-                <div><strong>Paris SG vs Marseille</strong><br><small style="color:#94a3b8">Ligue 1</small></div>
-                <button onclick="document.getElementById('home-team').value='Paris SG'; document.getElementById('away-team').value='Marseille';" style="width:auto; padding:5px 10px; background:#334155;">Choisir</button>
+    <!-- SECTION PRONOS -->
+    <div id="section-pronos" class="page-section active">
+        <div class="card" id="card-selection">
+            <h3>📊 Sélection Rapide</h3>
+            <div class="form-group">
+                <label>Championnat :</label>
+                <select id="league-select">
+                    <option value="Ligue 1">⚽ Ligue 1 (France)</option>
+                    <option value="Premier League">🇬🇧 Premier League (Angleterre)</option>
+                    <option value="La Liga">🇪🇸 La Liga (Espagne)</option>
+                    <option value="Champions League">🏆 Champions League</option>
+                </select>
             </div>
-            <div class="match-item">
-                <div><strong>Real Madrid vs FC Barcelona</strong><br><small style="color:#94a3b8">La Liga</small></div>
-                <button onclick="document.getElementById('home-team').value='Real Madrid'; document.getElementById('away-team').value='FC Barcelona';" style="width:auto; padding:5px 10px; background:#334155;">Choisir</button>
+
+            <div class="form-group">
+                <div class="team-inputs">
+                    <input type="text" id="home-team" placeholder="Domicile" value="Paris SG">
+                    <span style="color: var(--primary); font-weight: bold;">VS</span>
+                    <input type="text" id="away-team" placeholder="Extérieur" value="Marseille">
+                </div>
+            </div>
+
+            <button id="btn-generate" onclick="handleGenerateAnalysis()" class="btn-generate">⚡ Générer l'Analyse (1 Jeton)</button>
+        </div>
+
+        <div class="card">
+            <h3>📅 Matchs Réels du Jour</h3>
+            <div id="matches-container">
+                <div style="background: var(--inner-bg); margin: 8px 0; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">Ligue 1</div>
+                        <div style="font-size: 0.85rem; font-weight: 600;">Paris SG <span style="color: var(--primary);">VS</span> Marseille</div>
+                    </div>
+                    <button onclick="selectMatch('Paris SG', 'Marseille')" style="background:var(--border-color); color:var(--primary); border:1px solid var(--primary); padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Choisir</button>
+                </div>
+
+                <div style="background: var(--inner-bg); margin: 8px 0; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">La Liga</div>
+                        <div style="font-size: 0.85rem; font-weight: 600;">Real Madrid <span style="color: var(--primary);">VS</span> FC Barcelona</div>
+                    </div>
+                    <button onclick="selectMatch('Real Madrid', 'FC Barcelona')" style="background:var(--border-color); color:var(--primary); border:1px solid var(--primary); padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Choisir</button>
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- SECTION DIRECT -->
+    <div id="section-direct" class="page-section">
+        <div class="card">
+            <h3>🔴 Matchs en Direct</h3>
+            <div style="text-align:center; padding:15px; color:var(--text-muted);">Matchs en cours d'analyse...</div>
+        </div>
+    </div>
+
+    <!-- SECTION COMPTE -->
+    <div id="section-compte" class="page-section">
+        <div class="card" style="text-align: center;">
+            <h3>👤 Mon Compte</h3>
+            <p style="font-size: 0.9rem;">Solde actuel : <strong id="account-credits">10</strong> Jetons</p>
+            <button class="btn-recharge" onclick="rechargeCredits()">🎬 Obtenir +5 Jetons</button>
+        </div>
+    </div>
+
+    <!-- MENU DU BAS -->
+    <nav class="nav-tabs">
+        <div id="tab-pronos" class="tab-item active" onclick="switchTab('pronos')">Pronos</div>
+        <div id="tab-direct" class="tab-item" onclick="switchTab('direct')">Direct</div>
+        <div id="tab-compte" class="tab-item" onclick="switchTab('compte')">Compte</div>
+    </nav>
 
     <script src="./script.js"></script>
 </body>
