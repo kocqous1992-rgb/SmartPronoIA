@@ -10,6 +10,7 @@ const EXTENDED_LEAGUES = [
     { value: "Saudi Pro League", name: "🇸🇦 Saudi Pro League" }
 ];
 
+// LISTE ÉTENDUE DE 12 MATCHS RÉELS
 const MATCHES_DATA = [
     { home: "Paris SG", away: "Marseille", league: "Ligue 1", leagueName: "⚽ Ligue 1 (France)" },
     { home: "Lyon", away: "Monaco", league: "Ligue 1", leagueName: "⚽ Ligue 1 (France)" },
@@ -51,7 +52,6 @@ function populateLeagueSelect() {
     select.innerHTML = EXTENDED_LEAGUES.map(l => `<option value="${l.value}">${l.name}</option>`).join('');
 }
 
-// FILTRE MULTI-CRITÈRES (RECHERCHE + CHAMPIONNAT)
 window.filterMatches = function() {
     const selectedLeague = document.getElementById('league-select').value;
     const searchInput = document.getElementById('search-input')?.value.toLowerCase().trim() || '';
@@ -83,13 +83,13 @@ function renderMatchesList(list) {
 
     const html = list.map(m => `
         <div style="background: var(--inner-bg); margin: 8px 0; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
-            <div style="flex:1; cursor:pointer;" onclick="selectMatch('${m.home}', '${m.away}')">
+            <div style="flex:1; cursor:pointer;" onclick="selectMatch('${m.home.replace(/'/g, "\\'")}', '${m.away.replace(/'/g, "\\'")}')">
                 <div style="font-size: 0.75rem; color: var(--text-muted);">${m.leagueName}</div>
                 <div style="font-size: 0.85rem; font-weight: 600;">${m.home} <span style="color: var(--primary);">VS</span> ${m.away}</div>
             </div>
             <div style="display:flex; gap:5px;">
-                <button onclick="selectMatch('${m.home}', '${m.away}')" style="background:var(--card-bg); color:var(--primary); border:1px solid var(--primary); padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Choisir</button>
-                <button onclick="addToCoupon('${m.home}', '${m.away}')" style="background:#eab308; color:#000; border:none; padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">+ Ticket</button>
+                <button onclick="selectMatch('${m.home.replace(/'/g, "\\'")}', '${m.away.replace(/'/g, "\\'")}')" style="background:var(--card-bg); color:var(--primary); border:1px solid var(--primary); padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Choisir</button>
+                <button onclick="addToCoupon('${m.home.replace(/'/g, "\\'")}', '${m.away.replace(/'/g, "\\'")}')" style="background:#eab308; color:#000; border:none; padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">+ Ticket</button>
             </div>
         </div>
     `).join('');
