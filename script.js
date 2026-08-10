@@ -10,7 +10,8 @@ const EXTENDED_LEAGUES = [
     { value: "Saudi Pro League", name: "🇸🇦 Saudi League" }
 ];
 
-const MATCHES_DATA = [
+// LISTE DE SECOURS (12 MATCHS RÉELS) EN CAS DE LENTEUR D'API
+const FALLBACK_MATCHES = [
     { home: "Paris SG", away: "Marseille", league: "Ligue 1", leagueName: "⚽ Ligue 1 (France)" },
     { home: "Lyon", away: "Monaco", league: "Ligue 1", leagueName: "⚽ Ligue 1 (France)" },
     { home: "Real Madrid", away: "FC Barcelona", league: "La Liga", leagueName: "🇪🇸 La Liga (Espagne)" },
@@ -25,13 +26,13 @@ const MATCHES_DATA = [
     { home: "Al Hilal", away: "Al Nassr", league: "Saudi Pro League", leagueName: "🇸🇦 Saudi Pro League" }
 ];
 
+let globalMatchesData = [];
 let couponList = [];
 let currentFilterLeague = "ALL";
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     populateLeagueSelect();
     renderLeaguePills();
-    renderMatchesList(MATCHES_DATA);
     syncCreditsUI();
     setupEventListeners();
     loadHistoryUI();
@@ -39,7 +40,44 @@ document.addEventListener('DOMContentLoaded', () => {
     if (localStorage.getItem('smartprono_theme') === 'light') {
         document.body.classList.add('light-mode');
     }
+
+    // Chargement des vrais matchs du jour depuis l'API
+    await initMatchesData();
 });
+
+function getTodayDateString() {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+async function initMatchesData() {
+    const today = getTodayDateString();
+    const apiUrl = `https://www.thesportsdb.com/api/v1/json/3/eventsday.php?s=Soccer&d=${today}`;
+
+    try {
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+
+        if (data && data.events && data.events.length > 0) {
+            globalMatchesData = data.events.map(e => ({
+                home: e.strHomeTeam,
+                away: e.strAwayTeam,
+                league: e.strLeague || "ALL",
+                leagueName: e.strLeague || "⚽ Football"
+            }));
+        } else {
+            globalMatchesData = FALLBACK_MATCHES;
+        }
+    } catch (error) {
+        console.log("Mode secours activé : chargement de la liste étendue.");
+        globalMatchesData = FALLBACK_MATCHES;
+    }
+
+    renderMatchesList(globalMatchesData);
+}
 
 window.toggleTheme = function() {
     document.body.classList.toggle('light-mode');
@@ -80,10 +118,10 @@ window.filterMatches = function() {
 
     const searchInput = document.getElementById('search-input')?.value.toLowerCase().trim() || '';
 
-    let filtered = MATCHES_DATA;
+    let filtered = globalMatchesData;
 
     if (selectedLeague !== 'ALL') {
-        filtered = filtered.filter(m => m.league === selectedLeague);
+        filtered = filtered.filter(m => m.league.toLowerCase().includes(selectedLeague.toLowerCase()));
     }
 
     if (searchInput !== '') {
@@ -101,7 +139,7 @@ function renderMatchesList(list) {
     const liveContainer = document.getElementById('live-matches-container');
 
     if (!list || list.length === 0) {
-        if (container) container.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Aucun match trouvé.</div>`;
+        if (container) container.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Aucun match trouvé pour cette sélection.</div>`;
         return;
     }
 
