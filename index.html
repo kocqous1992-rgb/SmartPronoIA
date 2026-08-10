@@ -6,6 +6,11 @@
     <title>SmartPronoIA</title>
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#0f172a">
+
+    <!-- 💡 OPTION 2 : INSÈRE TON CODE MONETAG / PUBLICITÉ ICI -->
+    <!-- Exemple pour Monetag Rewards / SDK : -->
+    <!-- <script src="//thubanoa.com/1?z=TON_ZONE_ID" async data-cfasync="false"></script> -->
+
     <style>
         :root {
             --bg-color: #0f172a;
@@ -24,7 +29,7 @@
             color: var(--text-color);
             margin: 0;
             padding: 15px;
-            padding-bottom: 70px;
+            padding-bottom: 75px;
         }
 
         header {
@@ -36,8 +41,16 @@
             margin-bottom: 15px;
         }
 
-        .logo { font-size: 1.1rem; font-weight: bold; color: var(--primary); }
-        .user-badge { background: var(--border-color); padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+        .logo { font-size: 1.15rem; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; }
+        .user-badge { 
+            background: rgba(56, 189, 248, 0.1); 
+            padding: 6px 14px; 
+            border-radius: 20px; 
+            font-size: 0.85rem; 
+            font-weight: 700; 
+            border: 1px solid var(--primary);
+            color: var(--primary);
+        }
 
         .card {
             background-color: var(--card-bg);
@@ -45,6 +58,7 @@
             padding: 15px;
             border: 1px solid var(--border-color);
             margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
         }
 
         .card h3 { margin-top: 0; font-size: 1rem; }
@@ -61,16 +75,18 @@
         .btn-generate {
             width: 100%; background: #2563eb; color: white; border: none; padding: 12px;
             border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer; margin-top: 10px;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
         }
 
         .btn-recharge {
-            width: 100%; background: var(--accent); color: #000; border: none; padding: 10px;
-            border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px;
+            width: 100%; background: var(--accent); color: #000; border: none; padding: 12px;
+            border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px;
+            font-size: 0.9rem;
         }
 
         .btn-danger {
             background: transparent; color: #ef4444; border: 1px solid #ef4444; padding: 5px 10px;
-            border-radius: 6px; font-size: 0.75rem; cursor: pointer; margin-top: 8px;
+            border-radius: 6px; font-size: 0.75rem; cursor: pointer;
         }
 
         .page-section { display: none; }
@@ -88,7 +104,7 @@
 <body>
 
     <header>
-        <div class="logo">⚽ SmartPronoIA</div>
+        <div class="logo">⚽ <span>SmartPronoIA</span></div>
         <div class="user-badge">🪙 <span id="credits-count">10</span> Jetons</div>
     </header>
 
@@ -178,7 +194,7 @@
 
         <div class="card">
             <h3>🪙 Recharger des Jetons</h3>
-            <p style="font-size:0.8rem; color:#94a3b8;">Visionnez une publicité sponsorisée (Monetag / AdMob) pour créditer +5 jetons.</p>
+            <p style="font-size:0.8rem; color:#94a3b8;">Visionnez une publicité sponsorisée pour créditer +5 jetons.</p>
             <button class="btn-recharge" id="btn-recharge-ad">🎬 Regarder une pub (+5 Jetons)</button>
         </div>
     </div>
@@ -192,5 +208,10 @@
     </nav>
 
     <script src="./script.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(() => {});
+        }
+    </script>
 </body>
 </html>
