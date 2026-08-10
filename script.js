@@ -12,11 +12,17 @@ const EXTENDED_LEAGUES = [
 
 const MATCHES_DATA = [
     { home: "Paris SG", away: "Marseille", league: "Ligue 1", leagueName: "⚽ Ligue 1 (France)" },
+    { home: "Lyon", away: "Monaco", league: "Ligue 1", leagueName: "⚽ Ligue 1 (France)" },
     { home: "Real Madrid", away: "FC Barcelona", league: "La Liga", leagueName: "🇪🇸 La Liga (Espagne)" },
+    { home: "Atletico Madrid", away: "Sevilla", league: "La Liga", leagueName: "🇪🇸 La Liga (Espagne)" },
     { home: "Arsenal", away: "Manchester City", league: "Premier League", leagueName: "🇬🇧 Premier League (Angleterre)" },
+    { home: "Liverpool", away: "Chelsea", league: "Premier League", leagueName: "🇬🇧 Premier League (Angleterre)" },
     { home: "Bayern München", away: "Dortmund", league: "Bundesliga", leagueName: "🇩🇪 Bundesliga (Allemagne)" },
     { home: "Inter", away: "AC Milan", league: "Serie A", leagueName: "🇮🇹 Serie A (Italie)" },
-    { home: "Al Ahly", away: "Zamalek", league: "CAF Champions League", leagueName: "🌍 Ligue des Champions CAF" }
+    { home: "Juventus", away: "Napoli", league: "Serie A", leagueName: "🇮🇹 Serie A (Italie)" },
+    { home: "Al Ahly", away: "Zamalek", league: "CAF Champions League", leagueName: "🌍 Ligue des Champions CAF" },
+    { home: "Wydad Casablanca", away: "Raja Casablanca", league: "CAF Champions League", leagueName: "🌍 Ligue des Champions CAF" },
+    { home: "Al Hilal", away: "Al Nassr", league: "Saudi Pro League", leagueName: "🇸🇦 Saudi Pro League" }
 ];
 
 let couponList = [];
@@ -35,7 +41,6 @@ function populateLeagueSelect() {
     select.innerHTML = EXTENDED_LEAGUES.map(l => `<option value="${l.value}">${l.name}</option>`).join('');
 }
 
-// FILTRE DYNAMIQUE PAR CHAMPIONNAT
 window.filterMatchesByLeague = function() {
     const selectedLeague = document.getElementById('league-select').value;
     if (selectedLeague === 'ALL') {
@@ -100,6 +105,14 @@ function renderCouponUI() {
 
     const totalOdds = couponList.reduce((acc, m) => acc * parseFloat(m.odds), 1).toFixed(2);
 
+    let couponText = `🎟️ *COUPON COMBINÉ SMARTPRONOIA*\n`;
+    couponList.forEach(m => {
+        couponText += `• ${m.home} vs ${m.away} -> ${m.advice} (Cote: ${m.odds})\n`;
+    });
+    couponText += `🔥 *Cote Totale : ${totalOdds}*`;
+
+    const shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(couponText)}`;
+
     wrapper.innerHTML = `
         <div class="card" style="border: 2px solid #eab308; background: #1e293b;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -115,6 +128,9 @@ function renderCouponUI() {
                     <button onclick="removeFromCoupon(${i})" style="background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; cursor:pointer;">❌</button>
                 </div>
             `).join('')}
+            <a href="${shareUrl}" target="_blank" style="display:block; text-align:center; background:#22c55e; color:#000; font-weight:bold; padding:8px; border-radius:6px; text-decoration:none; font-size:0.8rem; margin-top:8px;">
+                📲 Partager ce Ticket sur WhatsApp
+            </a>
         </div>
     `;
 }
@@ -234,7 +250,6 @@ function handleGenerateAnalysis() {
     card.scrollIntoView({ behavior: 'smooth' });
 }
 
-// HISTORIQUE
 function saveAnalysisToHistory(item) {
     let history = JSON.parse(localStorage.getItem('smartprono_history')) || [];
     history.unshift(item);
@@ -266,7 +281,6 @@ window.clearHistory = function() {
     loadHistoryUI();
 };
 
-// INTEGRATION MONETAG / PUBLICITE RECHARGE
 function setupEventListeners() {
     document.getElementById('btn-generate')?.addEventListener('click', handleGenerateAnalysis);
 
@@ -275,14 +289,12 @@ function setupEventListeners() {
         btnRechargeAd.onclick = () => {
             btnRechargeAd.disabled = true;
 
-            // Si vous avez un SDK publicitaire (Monetag), l'appel se fait ici :
             if (typeof show_8854321 === 'function') {
                 show_8854321().then(() => {
                     updateCredits(getCredits() + 5);
                     btnRechargeAd.disabled = false;
                 });
             } else {
-                // Fallback avec décompte de sécurité de 5 secondes
                 let timer = 5;
                 const interval = setInterval(() => {
                     btnRechargeAd.innerText = `⏳ Pub en cours (${timer}s)...`;
