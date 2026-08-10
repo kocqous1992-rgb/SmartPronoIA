@@ -68,6 +68,11 @@
             border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px;
         }
 
+        .btn-danger {
+            background: transparent; color: #ef4444; border: 1px solid #ef4444; padding: 5px 10px;
+            border-radius: 6px; font-size: 0.75rem; cursor: pointer; margin-top: 8px;
+        }
+
         .page-section { display: none; }
         .page-section.active { display: block; }
 
@@ -96,7 +101,7 @@
             <h3>📊 Sélection Rapide</h3>
             <div class="form-group">
                 <label>Championnat :</label>
-                <select id="league-select"></select>
+                <select id="league-select" onchange="filterMatchesByLeague()"></select>
             </div>
 
             <div class="form-group">
@@ -162,15 +167,18 @@
         </div>
 
         <div class="card">
-            <h3>📜 Mes Dernières Analyses</h3>
-            <div id="history-container">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0;">📜 Mes Dernières Analyses</h3>
+                <button class="btn-danger" onclick="clearHistory()">Vider</button>
+            </div>
+            <div id="history-container" style="margin-top:10px;">
                 <div style="text-align:center; padding:10px; color:#94a3b8; font-size:0.85rem;">Aucune analyse enregistrée.</div>
             </div>
         </div>
 
         <div class="card">
             <h3>🪙 Recharger des Jetons</h3>
-            <p style="font-size:0.8rem; color:#94a3b8;">Visionnez une vidéo sponsorisée pour créditer +5 jetons.</p>
+            <p style="font-size:0.8rem; color:#94a3b8;">Visionnez une publicité sponsorisée (Monetag / AdMob) pour créditer +5 jetons.</p>
             <button class="btn-recharge" id="btn-recharge-ad">🎬 Regarder une pub (+5 Jetons)</button>
         </div>
     </div>

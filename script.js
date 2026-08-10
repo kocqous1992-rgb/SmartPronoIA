@@ -1,4 +1,5 @@
 const EXTENDED_LEAGUES = [
+    { value: "ALL", name: "🌐 Toutes les compétitions" },
     { value: "Ligue 1", name: "⚽ Ligue 1 (France)" },
     { value: "Premier League", name: "🇬🇧 Premier League (Angleterre)" },
     { value: "La Liga", name: "🇪🇸 La Liga (Espagne)" },
@@ -10,19 +11,19 @@ const EXTENDED_LEAGUES = [
 ];
 
 const MATCHES_DATA = [
-    { home: "Paris SG", away: "Marseille", league: "⚽ Ligue 1 (France)" },
-    { home: "Real Madrid", away: "FC Barcelona", league: "🇪🇸 La Liga (Espagne)" },
-    { home: "Arsenal", away: "Manchester City", league: "🇬🇧 Premier League (Angleterre)" },
-    { home: "Bayern München", away: "Dortmund", league: "🇩🇪 Bundesliga (Allemagne)" },
-    { home: "Inter", away: "AC Milan", league: "🇮🇹 Serie A (Italie)" },
-    { home: "Al Ahly", away: "Zamalek", league: "🌍 Ligue des Champions CAF" }
+    { home: "Paris SG", away: "Marseille", league: "Ligue 1", leagueName: "⚽ Ligue 1 (France)" },
+    { home: "Real Madrid", away: "FC Barcelona", league: "La Liga", leagueName: "🇪🇸 La Liga (Espagne)" },
+    { home: "Arsenal", away: "Manchester City", league: "Premier League", leagueName: "🇬🇧 Premier League (Angleterre)" },
+    { home: "Bayern München", away: "Dortmund", league: "Bundesliga", leagueName: "🇩🇪 Bundesliga (Allemagne)" },
+    { home: "Inter", away: "AC Milan", league: "Serie A", leagueName: "🇮🇹 Serie A (Italie)" },
+    { home: "Al Ahly", away: "Zamalek", league: "CAF Champions League", leagueName: "🌍 Ligue des Champions CAF" }
 ];
 
 let couponList = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     populateLeagueSelect();
-    renderMatchesList();
+    renderMatchesList(MATCHES_DATA);
     syncCreditsUI();
     setupEventListeners();
     loadHistoryUI();
@@ -34,14 +35,30 @@ function populateLeagueSelect() {
     select.innerHTML = EXTENDED_LEAGUES.map(l => `<option value="${l.value}">${l.name}</option>`).join('');
 }
 
-function renderMatchesList() {
+// FILTRE DYNAMIQUE PAR CHAMPIONNAT
+window.filterMatchesByLeague = function() {
+    const selectedLeague = document.getElementById('league-select').value;
+    if (selectedLeague === 'ALL') {
+        renderMatchesList(MATCHES_DATA);
+    } else {
+        const filtered = MATCHES_DATA.filter(m => m.league === selectedLeague);
+        renderMatchesList(filtered);
+    }
+};
+
+function renderMatchesList(list) {
     const container = document.getElementById('matches-container');
     const liveContainer = document.getElementById('live-matches-container');
 
-    const html = MATCHES_DATA.map(m => `
+    if (!list || list.length === 0) {
+        if (container) container.innerHTML = `<div style="text-align:center; padding:15px; color:#94a3b8;">Aucun match disponible pour cette compétition.</div>`;
+        return;
+    }
+
+    const html = list.map(m => `
         <div style="background: #0f172a; margin: 8px 0; padding: 10px; border-radius: 6px; border: 1px solid #334155; display:flex; justify-content:space-between; align-items:center;">
             <div style="flex:1; cursor:pointer;" onclick="selectMatch('${m.home}', '${m.away}')">
-                <div style="font-size: 0.75rem; color: #94a3b8;">${m.league}</div>
+                <div style="font-size: 0.75rem; color: #94a3b8;">${m.leagueName}</div>
                 <div style="font-size: 0.85rem; font-weight: 600;">${m.home} <span style="color: #38bdf8;">VS</span> ${m.away}</div>
             </div>
             <div style="display:flex; gap:5px;">
@@ -217,6 +234,7 @@ function handleGenerateAnalysis() {
     card.scrollIntoView({ behavior: 'smooth' });
 }
 
+// HISTORIQUE
 function saveAnalysisToHistory(item) {
     let history = JSON.parse(localStorage.getItem('smartprono_history')) || [];
     history.unshift(item);
@@ -243,25 +261,41 @@ function loadHistoryUI() {
     `).join('');
 }
 
+window.clearHistory = function() {
+    localStorage.removeItem('smartprono_history');
+    loadHistoryUI();
+};
+
+// INTEGRATION MONETAG / PUBLICITE RECHARGE
 function setupEventListeners() {
     document.getElementById('btn-generate')?.addEventListener('click', handleGenerateAnalysis);
-    
+
     const btnRechargeAd = document.getElementById('btn-recharge-ad');
     if (btnRechargeAd) {
         btnRechargeAd.onclick = () => {
             btnRechargeAd.disabled = true;
-            let timer = 5;
-            const interval = setInterval(() => {
-                btnRechargeAd.innerText = `⏳ Visionnage de la pub (${timer}s)...`;
-                timer--;
-                if (timer < 0) {
-                    clearInterval(interval);
+
+            // Si vous avez un SDK publicitaire (Monetag), l'appel se fait ici :
+            if (typeof show_8854321 === 'function') {
+                show_8854321().then(() => {
                     updateCredits(getCredits() + 5);
-                    btnRechargeAd.innerText = `🎬 Regarder une pub (+5 Jetons)`;
                     btnRechargeAd.disabled = false;
-                    alert("🎉 FÉLICITATIONS ! +5 Jetons ont été crédités.");
-                }
-            }, 1000);
+                });
+            } else {
+                // Fallback avec décompte de sécurité de 5 secondes
+                let timer = 5;
+                const interval = setInterval(() => {
+                    btnRechargeAd.innerText = `⏳ Pub en cours (${timer}s)...`;
+                    timer--;
+                    if (timer < 0) {
+                        clearInterval(interval);
+                        updateCredits(getCredits() + 5);
+                        btnRechargeAd.innerText = `🎬 Regarder une pub (+5 Jetons)`;
+                        btnRechargeAd.disabled = false;
+                        alert("🎉 FÉLICITATIONS ! +5 Jetons ont été crédités à votre compte.");
+                    }
+                }, 1000);
+            }
         };
     }
 }
