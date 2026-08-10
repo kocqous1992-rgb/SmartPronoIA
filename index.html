@@ -93,19 +93,14 @@
             <h3>📊 Sélection Rapide</h3>
             <div class="form-group">
                 <label>Championnat :</label>
-                <select id="league-select">
-                    <option value="Ligue 1">⚽ Ligue 1 (France)</option>
-                    <option value="Premier League">🇬🇧 Premier League (Angleterre)</option>
-                    <option value="La Liga">🇪🇸 La Liga (Espagne)</option>
-                    <option value="Champions League">🏆 Champions League</option>
-                </select>
+                <select id="league-select"></select>
             </div>
 
             <div class="form-group">
                 <div class="team-inputs">
-                    <input type="text" id="home-team" placeholder="Domicile" value="Paris SG">
+                    <input type="text" id="home-team" placeholder="Domicile">
                     <span style="color: var(--primary); font-weight: bold;">VS</span>
-                    <input type="text" id="away-team" placeholder="Extérieur" value="Marseille">
+                    <input type="text" id="away-team" placeholder="Extérieur">
                 </div>
             </div>
 
@@ -115,21 +110,7 @@
         <div class="card">
             <h3>📅 Matchs Réels du Jour</h3>
             <div id="matches-container">
-                <div style="background: var(--inner-bg); margin: 8px 0; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <div style="font-size: 0.75rem; color: var(--text-muted);">Ligue 1</div>
-                        <div style="font-size: 0.85rem; font-weight: 600;">Paris SG <span style="color: var(--primary);">VS</span> Marseille</div>
-                    </div>
-                    <button onclick="selectMatch('Paris SG', 'Marseille')" style="background:var(--border-color); color:var(--primary); border:1px solid var(--primary); padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Choisir</button>
-                </div>
-
-                <div style="background: var(--inner-bg); margin: 8px 0; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <div style="font-size: 0.75rem; color: var(--text-muted);">La Liga</div>
-                        <div style="font-size: 0.85rem; font-weight: 600;">Real Madrid <span style="color: var(--primary);">VS</span> FC Barcelona</div>
-                    </div>
-                    <button onclick="selectMatch('Real Madrid', 'FC Barcelona')" style="background:var(--border-color); color:var(--primary); border:1px solid var(--primary); padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Choisir</button>
-                </div>
+                <div style="text-align:center; padding:15px; color:#94a3b8;">⏳ Chargement...</div>
             </div>
         </div>
     </div>
@@ -138,7 +119,9 @@
     <div id="section-direct" class="page-section">
         <div class="card">
             <h3>🔴 Matchs en Direct</h3>
-            <div style="text-align:center; padding:15px; color:var(--text-muted);">Matchs en cours d'analyse...</div>
+            <div id="live-matches-container">
+                <div style="text-align:center; padding:15px; color:#94a3b8;">⚡ Recherche...</div>
+            </div>
         </div>
     </div>
 

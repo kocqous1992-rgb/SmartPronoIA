@@ -1,4 +1,4 @@
-// Navigation entre onglets
+Navigation entre onglets
 window.switchTab = function(tabName) {
     document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
     document.querySelectorAll('.tab-item').forEach(tab => tab.classList.remove('active'));
