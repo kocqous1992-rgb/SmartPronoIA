@@ -1,75 +1,120 @@
-Navigation entre onglets
+const EXTENDED_LEAGUES = [
+    { value: "Ligue 1", name: "⚽ Ligue 1 (France)" },
+    { value: "Premier League", name: "🇬🇧 Premier League (Angleterre)" },
+    { value: "La Liga", name: "🇪🇸 La Liga (Espagne)" },
+    { value: "Serie A", name: "🇮🇹 Serie A (Italie)" },
+    { value: "Bundesliga", name: "🇩🇪 Bundesliga (Allemagne)" },
+    { value: "UEFA Champions League", name: "🏆 Champions League" },
+    { value: "CAF Champions League", name: "🌍 Ligue des Champions CAF" },
+    { value: "Saudi Pro League", name: "🇸🇦 Saudi Pro League" }
+];
+
+const MATCHES_DATA = [
+    { home: "Paris SG", away: "Marseille", league: "⚽ Ligue 1 (France)" },
+    { home: "Real Madrid", away: "FC Barcelona", league: "🇪🇸 La Liga (Espagne)" },
+    { home: "Arsenal", away: "Manchester City", league: "🇬🇧 Premier League (Angleterre)" },
+    { home: "Bayern München", away: "Dortmund", league: "🇩🇪 Bundesliga (Allemagne)" },
+    { home: "Inter", away: "AC Milan", league: "🇮🇹 Serie A (Italie)" },
+    { home: "Al Ahly", away: "Zamalek", league: "🌍 Ligue des Champions CAF" }
+];
+
+document.addEventListener('DOMContentLoaded', () => {
+    populateLeagueSelect();
+    renderMatchesList();
+    syncCreditsUI();
+    setupEventListeners();
+});
+
+function populateLeagueSelect() {
+    const select = document.getElementById('league-select');
+    if (!select) return;
+    select.innerHTML = EXTENDED_LEAGUES.map(l => `<option value="${l.value}">${l.name}</option>`).join('');
+}
+
+function renderMatchesList() {
+    const container = document.getElementById('matches-container');
+    const liveContainer = document.getElementById('live-matches-container');
+
+    const html = MATCHES_DATA.map(m => `
+        <div style="background: #0f172a; margin: 8px 0; padding: 10px; border-radius: 6px; border: 1px solid #334155; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <div style="font-size: 0.75rem; color: #94a3b8;">${m.league}</div>
+                <div style="font-size: 0.85rem; font-weight: 600;">${m.home} <span style="color: #38bdf8;">VS</span> ${m.away}</div>
+            </div>
+            <button onclick="selectMatch('${m.home}', '${m.away}')" style="background:#334155; color:#38bdf8; border:1px solid #38bdf8; padding:5px 10px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Choisir</button>
+        </div>
+    `).join('');
+
+    if (container) container.innerHTML = html;
+    if (liveContainer) liveContainer.innerHTML = html;
+}
+
+window.selectMatch = function(home, away) {
+    document.getElementById('home-team').value = home;
+    document.getElementById('away-team').value = away;
+    switchTab('pronos');
+};
+
 window.switchTab = function(tabName) {
     document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
     document.querySelectorAll('.tab-item').forEach(tab => tab.classList.remove('active'));
 
-    const targetSection = document.getElementById(`section-${tabName}`);
-    const targetTab = document.getElementById(`tab-${tabName}`);
+    const targetSection = document.getElementById('section-' + tabName);
+    const targetTab = document.getElementById('tab-' + tabName);
 
     if (targetSection) targetSection.classList.add('active');
     if (targetTab) targetTab.classList.add('active');
 };
 
-// Sélection d'un match depuis la liste
-window.selectMatch = function(home, away) {
-    document.getElementById('home-team').value = home;
-    document.getElementById('away-team').value = away;
-    window.switchTab('pronos');
-};
-
-// Synchronisation des jetons
 function getCredits() {
     const saved = localStorage.getItem('smartprono_credits');
     return saved !== null ? parseInt(saved, 10) : 10;
 }
 
-function updateCreditsUI(count) {
-    localStorage.setItem('smartprono_credits', count);
-    const countElem = document.getElementById('credits-count');
-    const accElem = document.getElementById('account-credits');
-    if (countElem) countElem.innerText = count;
-    if (accElem) accElem.innerText = count;
+function syncCreditsUI() {
+    const credits = getCredits();
+    document.getElementById('credits-count').innerText = credits;
+    document.getElementById('account-credits').innerText = credits;
 }
 
-// Génération de l'analyse IA
-window.handleGenerateAnalysis = function() {
-    const home = document.getElementById('home-team')?.value.trim();
-    const away = document.getElementById('away-team')?.value.trim();
+function updateCredits(count) {
+    localStorage.setItem('smartprono_credits', count);
+    syncCreditsUI();
+}
+
+function handleGenerateAnalysis() {
+    const home = document.getElementById('home-team').value.trim();
+    const away = document.getElementById('away-team').value.trim();
 
     if (!home || !away) {
-        alert("Saisissez deux équipes !");
+        alert("Entrez deux équipes !");
         return;
     }
 
     let credits = getCredits();
     if (credits <= 0) {
-        alert("Plus de jetons ! Allez dans l'onglet Compte pour en ajouter.");
+        alert("Plus de jetons ! Rechargez dans l'onglet Compte.");
         return;
     }
 
-    // Déduction d'un jeton
-    credits--;
-    updateCreditsUI(credits);
+    updateCredits(credits - 1);
 
-    // Calculs de probabilité
     const winHome = Math.floor(Math.random() * 25) + 50;
     const winAway = Math.floor(Math.random() * 20) + 15;
     const draw = 100 - (winHome + winAway);
     const confidence = Math.floor(Math.random() * 10) + 85;
     const goalsPredict = (Math.random() * 1.2 + 1.8).toFixed(1);
-    const advice = winHome > 55 ? `Victoire ${home}` : 'Plus de 1.5 Buts';
+    const advice = winHome > 55 ? 'Victoire ' + home : 'Plus de 1.5 Buts';
 
-    // Supprime l'ancienne carte s'il y en a une
     const oldCard = document.getElementById('ai-result-card');
     if (oldCard) oldCard.remove();
 
     const shareText = encodeURIComponent(`⚽ Pronostic SmartPronoIA\n${home} vs ${away}\n🎯 Conseil: ${advice}\n🔥 Confiance: ${confidence}%`);
 
-    // Création de la carte de résultat avec jauges visuelles
     const card = document.createElement('div');
     card.id = 'ai-result-card';
     card.className = 'card';
-    card.style.cssText = "border: 2px solid #38bdf8; background: #1e293b; margin-top: 15px;";
+    card.style.cssText = "background: #1e293b; border: 2px solid #38bdf8; margin-top: 15px;";
 
     card.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -113,16 +158,15 @@ window.handleGenerateAnalysis = function() {
 
     document.getElementById('card-selection').after(card);
     card.scrollIntoView({ behavior: 'smooth' });
-};
+}
 
-// Recharger les jetons
-window.rechargeCredits = function() {
-    let credits = getCredits() + 5;
-    updateCreditsUI(credits);
-    alert("🎉 +5 Jetons ajoutés à votre solde !");
-};
-
-// Initialisation au chargement de la page
-document.addEventListener('DOMContentLoaded', () => {
-    updateCreditsUI(getCredits());
-});
+function setupEventListeners() {
+    document.getElementById('btn-generate')?.addEventListener('click', handleGenerateAnalysis);
+    const btnRecharge = document.querySelector('.btn-recharge');
+    if (btnRecharge) {
+        btnRecharge.onclick = () => {
+            updateCredits(getCredits() + 5);
+            alert("🎉 +5 Jetons ajoutés à votre solde !");
+        };
+    }
+}
