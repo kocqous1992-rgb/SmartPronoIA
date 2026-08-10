@@ -33,7 +33,17 @@ document.addEventListener('DOMContentLoaded', () => {
     syncCreditsUI();
     setupEventListeners();
     loadHistoryUI();
+    
+    if (localStorage.getItem('smartprono_theme') === 'light') {
+        document.body.classList.add('light-mode');
+    }
 });
+
+window.toggleTheme = function() {
+    document.body.classList.toggle('light-mode');
+    const isLight = document.body.classList.contains('light-mode');
+    localStorage.setItem('smartprono_theme', isLight ? 'light' : 'dark');
+};
 
 function populateLeagueSelect() {
     const select = document.getElementById('league-select');
@@ -41,14 +51,25 @@ function populateLeagueSelect() {
     select.innerHTML = EXTENDED_LEAGUES.map(l => `<option value="${l.value}">${l.name}</option>`).join('');
 }
 
-window.filterMatchesByLeague = function() {
+// FILTRE MULTI-CRITÈRES (RECHERCHE + CHAMPIONNAT)
+window.filterMatches = function() {
     const selectedLeague = document.getElementById('league-select').value;
-    if (selectedLeague === 'ALL') {
-        renderMatchesList(MATCHES_DATA);
-    } else {
-        const filtered = MATCHES_DATA.filter(m => m.league === selectedLeague);
-        renderMatchesList(filtered);
+    const searchInput = document.getElementById('search-input')?.value.toLowerCase().trim() || '';
+
+    let filtered = MATCHES_DATA;
+
+    if (selectedLeague !== 'ALL') {
+        filtered = filtered.filter(m => m.league === selectedLeague);
     }
+
+    if (searchInput !== '') {
+        filtered = filtered.filter(m => 
+            m.home.toLowerCase().includes(searchInput) || 
+            m.away.toLowerCase().includes(searchInput)
+        );
+    }
+
+    renderMatchesList(filtered);
 };
 
 function renderMatchesList(list) {
@@ -56,18 +77,18 @@ function renderMatchesList(list) {
     const liveContainer = document.getElementById('live-matches-container');
 
     if (!list || list.length === 0) {
-        if (container) container.innerHTML = `<div style="text-align:center; padding:15px; color:#94a3b8;">Aucun match disponible pour cette compétition.</div>`;
+        if (container) container.innerHTML = `<div style="text-align:center; padding:15px; color:#94a3b8;">Aucun match trouvé.</div>`;
         return;
     }
 
     const html = list.map(m => `
-        <div style="background: #0f172a; margin: 8px 0; padding: 10px; border-radius: 6px; border: 1px solid #334155; display:flex; justify-content:space-between; align-items:center;">
+        <div style="background: var(--inner-bg); margin: 8px 0; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
             <div style="flex:1; cursor:pointer;" onclick="selectMatch('${m.home}', '${m.away}')">
-                <div style="font-size: 0.75rem; color: #94a3b8;">${m.leagueName}</div>
-                <div style="font-size: 0.85rem; font-weight: 600;">${m.home} <span style="color: #38bdf8;">VS</span> ${m.away}</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">${m.leagueName}</div>
+                <div style="font-size: 0.85rem; font-weight: 600;">${m.home} <span style="color: var(--primary);">VS</span> ${m.away}</div>
             </div>
             <div style="display:flex; gap:5px;">
-                <button onclick="selectMatch('${m.home}', '${m.away}')" style="background:#334155; color:#38bdf8; border:1px solid #38bdf8; padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Choisir</button>
+                <button onclick="selectMatch('${m.home}', '${m.away}')" style="background:var(--card-bg); color:var(--primary); border:1px solid var(--primary); padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Choisir</button>
                 <button onclick="addToCoupon('${m.home}', '${m.away}')" style="background:#eab308; color:#000; border:none; padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">+ Ticket</button>
             </div>
         </div>
@@ -114,21 +135,21 @@ function renderCouponUI() {
     const shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(couponText)}`;
 
     wrapper.innerHTML = `
-        <div class="card" style="border: 2px solid #eab308; background: #1e293b;">
+        <div class="card" style="border: 2px solid #eab308; background: var(--card-bg);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                 <h4 style="margin:0; color:#eab308;">🎟️ Coupon Combiné (${couponList.length}/4)</h4>
-                <span style="font-size:0.85rem;">Cote Totale : <strong style="color:#22c55e; font-size:1.1rem;">${totalOdds}</strong></span>
+                <span style="font-size:0.85rem;">Cote Totale : <strong style="color:var(--accent); font-size:1.1rem;">${totalOdds}</strong></span>
             </div>
             ${couponList.map((m, i) => `
-                <div style="background:#0f172a; padding:8px; border-radius:6px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; border:1px solid #334155;">
+                <div style="background:var(--inner-bg); padding:8px; border-radius:6px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; border:1px solid var(--border-color);">
                     <div>
                         <div><strong>${m.home} VS ${m.away}</strong></div>
-                        <div style="color:#22c55e;">💡 ${m.advice} (Cote : ${m.odds})</div>
+                        <div style="color:var(--accent);">💡 ${m.advice} (Cote : ${m.odds})</div>
                     </div>
                     <button onclick="removeFromCoupon(${i})" style="background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; cursor:pointer;">❌</button>
                 </div>
             `).join('')}
-            <a href="${shareUrl}" target="_blank" style="display:block; text-align:center; background:#22c55e; color:#000; font-weight:bold; padding:8px; border-radius:6px; text-decoration:none; font-size:0.8rem; margin-top:8px;">
+            <a href="${shareUrl}" target="_blank" style="display:block; text-align:center; background:var(--accent); color:#000; font-weight:bold; padding:8px; border-radius:6px; text-decoration:none; font-size:0.8rem; margin-top:8px;">
                 📲 Partager ce Ticket sur WhatsApp
             </a>
         </div>
@@ -204,44 +225,44 @@ function handleGenerateAnalysis() {
     const card = document.createElement('div');
     card.id = 'ai-result-card';
     card.className = 'card';
-    card.style.cssText = "background: #1e293b; border: 2px solid #38bdf8; margin-top: 15px;";
+    card.style.cssText = "background: var(--card-bg); border: 2px solid var(--primary); margin-top: 15px;";
 
     card.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <h4 style="margin:0; color:#38bdf8; font-size:1rem;">🧠 Analyse SmartPronoIA</h4>
-            <span style="background:rgba(34, 197, 94, 0.2); color:#22c55e; border: 1px solid #22c55e; padding:3px 10px; border-radius:12px; font-size:0.75rem; font-weight:bold;">
+            <h4 style="margin:0; color:var(--primary); font-size:1rem;">🧠 Analyse SmartPronoIA</h4>
+            <span style="background:rgba(34, 197, 94, 0.2); color:var(--accent); border: 1px solid var(--accent); padding:3px 10px; border-radius:12px; font-size:0.75rem; font-weight:bold;">
                 Confiance : ${confidence}%
             </span>
         </div>
 
-        <div style="text-align:center; padding: 10px; background:#0f172a; border-radius:8px; margin-bottom:12px; border:1px solid #334155;">
-            <div style="font-size:0.95rem; font-weight:bold; color:#f8fafc;">
-                ${home} <span style="color:#38bdf8;">VS</span> ${away}
+        <div style="text-align:center; padding: 10px; background:var(--inner-bg); border-radius:8px; margin-bottom:12px; border:1px solid var(--border-color);">
+            <div style="font-size:0.95rem; font-weight:bold;">
+                ${home} <span style="color:var(--primary);">VS</span> ${away}
             </div>
         </div>
 
-        <div style="background:#0f172a; padding:12px; border-radius:8px; margin-bottom:12px; border:1px solid #334155;">
-            <div style="font-size:0.75rem; font-weight:bold; color:#94a3b8; margin-bottom:8px;">📊 PROBABILITÉS DU MATCH</div>
-            <div style="display:flex; height:10px; border-radius:5px; overflow:hidden; background:#334155; margin-bottom:10px;">
-                <div style="width:${winHome}%; background:#38bdf8;"></div>
+        <div style="background:var(--inner-bg); padding:12px; border-radius:8px; margin-bottom:12px; border:1px solid var(--border-color);">
+            <div style="font-size:0.75rem; font-weight:bold; color:var(--text-muted); margin-bottom:8px;">📊 PROBABILITÉS DU MATCH</div>
+            <div style="display:flex; height:10px; border-radius:5px; overflow:hidden; background:var(--border-color); margin-bottom:10px;">
+                <div style="width:${winHome}%; background:var(--primary);"></div>
                 <div style="width:${draw}%; background:#eab308;"></div>
                 <div style="width:${winAway}%; background:#ef4444;"></div>
             </div>
             <div style="display:flex; justify-content:space-between; font-size:0.75rem;">
-                <div style="color:#38bdf8;">🔵 ${home} : <strong>${winHome}%</strong></div>
+                <div style="color:var(--primary);">🔵 ${home} : <strong>${winHome}%</strong></div>
                 <div style="color:#eab308;">🟡 Nul : <strong>${draw}%</strong></div>
                 <div style="color:#ef4444;">🔴 ${away} : <strong>${winAway}%</strong></div>
             </div>
         </div>
 
-        <div style="background:#0f172a; padding:12px; border-radius:8px; border-left: 4px solid #22c55e; margin-bottom:12px;">
-            <div style="font-size:0.75rem; color:#94a3b8; font-weight:bold;">🎯 CONSEIL SÉLECTIONNÉ</div>
-            <div style="color:#22c55e; font-size:1rem; font-weight:bold; margin-top:4px;">${advice}</div>
-            <div style="color:#cbd5e1; font-size:0.75rem; margin-top:4px;">Moyenne buts : <strong style="color:#38bdf8;">${goalsPredict}</strong></div>
+        <div style="background:var(--inner-bg); padding:12px; border-radius:8px; border-left: 4px solid var(--accent); margin-bottom:12px;">
+            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:bold;">🎯 CONSEIL SÉLECTIONNÉ</div>
+            <div style="color:var(--accent); font-size:1rem; font-weight:bold; margin-top:4px;">${advice}</div>
+            <div style="color:var(--text-color); font-size:0.75rem; margin-top:4px;">Moyenne buts : <strong style="color:var(--primary);">${goalsPredict}</strong></div>
         </div>
 
         <a href="https://api.whatsapp.com/send?text=${shareText}" target="_blank" 
-           style="display:block; text-align:center; background:#22c55e; color:#000; font-weight:bold; padding:10px; border-radius:8px; text-decoration:none; font-size:0.85rem;">
+           style="display:block; text-align:center; background:var(--accent); color:#000; font-weight:bold; padding:10px; border-radius:8px; text-decoration:none; font-size:0.85rem;">
             📲 Partager le Pronostic sur WhatsApp
         </a>
     `;
@@ -263,15 +284,15 @@ function loadHistoryUI() {
 
     let history = JSON.parse(localStorage.getItem('smartprono_history')) || [];
     if (history.length === 0) {
-        container.innerHTML = `<div style="text-align:center; padding:10px; color:#94a3b8; font-size:0.85rem;">Aucune analyse enregistrée.</div>`;
+        container.innerHTML = `<div style="text-align:center; padding:10px; color:var(--text-muted); font-size:0.85rem;">Aucune analyse enregistrée.</div>`;
         return;
     }
 
     container.innerHTML = history.map(h => `
-        <div style="background:#0f172a; border:1px solid #334155; padding:8px 10px; border-radius:6px; margin-bottom:6px;">
-            <div style="font-weight:bold; font-size:0.85rem; color:#38bdf8;">${h.home} VS ${h.away}</div>
-            <div style="font-size:0.8rem; color:#22c55e;">💡 ${h.advice} (${h.confidence}% Confiance)</div>
-            <div style="font-size:0.7rem; color:#94a3b8;">Généré le ${h.date}</div>
+        <div style="background:var(--inner-bg); border:1px solid var(--border-color); padding:8px 10px; border-radius:6px; margin-bottom:6px;">
+            <div style="font-weight:bold; font-size:0.85rem; color:var(--primary);">${h.home} VS ${h.away}</div>
+            <div style="font-size:0.8rem; color:var(--accent);">💡 ${h.advice} (${h.confidence}% Confiance)</div>
+            <div style="font-size:0.7rem; color:var(--text-muted);">Généré le ${h.date}</div>
         </div>
     `).join('');
 }

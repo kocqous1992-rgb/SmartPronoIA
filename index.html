@@ -22,6 +22,17 @@
             --inner-bg: #0f172a;
         }
 
+        body.light-mode {
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --primary: #0284c7;
+            --accent: #16a34a;
+            --text-color: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+            --inner-bg: #f8fafc;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-color);
@@ -29,6 +40,7 @@
             margin: 0;
             padding: 15px;
             padding-bottom: 75px;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         header {
@@ -41,6 +53,8 @@
         }
 
         .logo { font-size: 1.15rem; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; }
+        .header-actions { display: flex; align-items: center; gap: 8px; }
+        .theme-toggle { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); padding: 5px 10px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; }
         .user-badge { 
             background: rgba(56, 189, 248, 0.1); 
             padding: 6px 14px; 
@@ -51,13 +65,18 @@
             color: var(--primary);
         }
 
+        .pwa-banner {
+            background: #2563eb; color: white; padding: 10px 15px; border-radius: 8px;
+            display: none; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 0.85rem;
+        }
+
         .card {
             background-color: var(--card-bg);
             border-radius: 12px;
             padding: 15px;
             border: 1px solid var(--border-color);
             margin-bottom: 15px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
         .card h3 { margin-top: 0; font-size: 1rem; }
@@ -104,8 +123,17 @@
 
     <header>
         <div class="logo">⚽ <span>SmartPronoIA</span></div>
-        <div class="user-badge">🪙 <span id="credits-count">10</span> Jetons</div>
+        <div class="header-actions">
+            <button class="theme-toggle" onclick="toggleTheme()">☀️ Mode</button>
+            <div class="user-badge">🪙 <span id="credits-count">10</span></div>
+        </div>
     </header>
+
+    <!-- BANNIÈRE INSTALLATION PWA -->
+    <div id="pwa-banner" class="pwa-banner">
+        <span>📲 Installer l'application sur votre écran</span>
+        <button onclick="installPWA()" style="background: white; color: #2563eb; border: none; padding: 5px 10px; border-radius: 6px; font-weight: bold; cursor: pointer;">Installer</button>
+    </div>
 
     <!-- SECTION PRONOS -->
     <div id="section-pronos" class="page-section active">
@@ -116,7 +144,7 @@
             <h3>📊 Sélection Rapide</h3>
             <div class="form-group">
                 <label>Championnat :</label>
-                <select id="league-select" onchange="filterMatchesByLeague()"></select>
+                <select id="league-select" onchange="filterMatches()"></select>
             </div>
 
             <div class="form-group">
@@ -132,6 +160,9 @@
 
         <div class="card">
             <h3>📅 Matchs Réels du Jour</h3>
+            <div class="form-group" style="margin-bottom: 10px;">
+                <input type="text" id="search-input" placeholder="🔍 Rechercher une équipe..." oninput="filterMatches()">
+            </div>
             <div id="matches-container">
                 <div style="text-align:center; padding:15px; color:#94a3b8;">⏳ Chargement...</div>
             </div>
@@ -140,23 +171,23 @@
 
     <!-- SECTION VIP -->
     <div id="section-vip" class="page-section">
-        <div class="card" style="border: 2px solid #eab308; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
+        <div class="card" style="border: 2px solid #eab308; background: linear-gradient(135deg, var(--card-bg) 0%, var(--inner-bg) 100%);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                 <h3 style="margin:0; color:#eab308;">🔥 Pronostics VIP (95% Confiance)</h3>
                 <span style="background:#eab308; color:#000; font-size:0.7rem; font-weight:bold; padding:2px 8px; border-radius:10px;">PRO</span>
             </div>
             <div id="vip-matches-list">
-                <div style="background: #0f172a; padding: 10px; border-radius: 6px; margin-top: 8px; border: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+                <div style="background: var(--inner-bg); padding: 10px; border-radius: 6px; margin-top: 8px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <div style="font-size: 0.85rem; font-weight: bold;">Paris SG VS Marseille</div>
-                        <div style="font-size: 0.75rem; color: #22c55e; font-weight: bold; margin-top: 2px;">💡 Conseil : Victoire Paris SG</div>
+                        <div style="font-size: 0.75rem; color: var(--accent); font-weight: bold; margin-top: 2px;">💡 Conseil : Victoire Paris SG</div>
                     </div>
                     <button onclick="selectMatch('Paris SG', 'Marseille')" style="background:#eab308; color:#000; font-weight:bold; border:none; border-radius:4px; padding:6px 10px; font-size:0.75rem; cursor:pointer;">Choisir</button>
                 </div>
-                <div style="background: #0f172a; padding: 10px; border-radius: 6px; margin-top: 8px; border: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+                <div style="background: var(--inner-bg); padding: 10px; border-radius: 6px; margin-top: 8px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <div style="font-size: 0.85rem; font-weight: bold;">Real Madrid VS FC Barcelona</div>
-                        <div style="font-size: 0.75rem; color: #22c55e; font-weight: bold; margin-top: 2px;">💡 Conseil : Plus de 2.5 Buts</div>
+                        <div style="font-size: 0.75rem; color: var(--accent); font-weight: bold; margin-top: 2px;">💡 Conseil : Plus de 2.5 Buts</div>
                     </div>
                     <button onclick="selectMatch('Real Madrid', 'FC Barcelona')" style="background:#eab308; color:#000; font-weight:bold; border:none; border-radius:4px; padding:6px 10px; font-size:0.75rem; cursor:pointer;">Choisir</button>
                 </div>
@@ -208,6 +239,24 @@
 
     <script src="./script.js"></script>
     <script>
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const banner = document.getElementById('pwa-banner');
+            if (banner) banner.style.display = 'flex';
+        });
+
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(() => {
+                    deferredPrompt = null;
+                    document.getElementById('pwa-banner').style.display = 'none';
+                });
+            }
+        }
+
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js').catch(() => {});
         }
