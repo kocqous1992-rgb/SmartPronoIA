@@ -95,7 +95,22 @@
                 <h3 style="margin:0; color:#eab308;">🔥 Top Pronos VIP du Jour</h3>
                 <span style="background:#eab308; color:#000; font-size:0.7rem; font-weight:bold; padding:2px 8px; border-radius:10px;">95% Confiance</span>
             </div>
-            <div id="vip-matches-container"></div>
+            <div id="vip-matches-container">
+                <div style="background: #0f172a; padding: 8px 10px; border-radius: 6px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #334155;">
+                    <div>
+                        <div style="font-size: 0.85rem; font-weight: bold;">Paris SG VS Marseille</div>
+                        <div style="font-size: 0.75rem; color: #22c55e; font-weight: bold;">💡 Conseil : Victoire Paris SG</div>
+                    </div>
+                    <button onclick="selectMatch('Paris SG', 'Marseille')" style="background:#eab308; color:#000; font-weight:bold; border:none; border-radius:4px; padding:4px 8px; font-size:0.7rem; cursor:pointer;">Analyser</button>
+                </div>
+                <div style="background: #0f172a; padding: 8px 10px; border-radius: 6px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #334155;">
+                    <div>
+                        <div style="font-size: 0.85rem; font-weight: bold;">Real Madrid VS FC Barcelona</div>
+                        <div style="font-size: 0.75rem; color: #22c55e; font-weight: bold;">💡 Conseil : Plus de 2.5 Buts</div>
+                    </div>
+                    <button onclick="selectMatch('Real Madrid', 'FC Barcelona')" style="background:#eab308; color:#000; font-weight:bold; border:none; border-radius:4px; padding:4px 8px; font-size:0.7rem; cursor:pointer;">Analyser</button>
+                </div>
+            </div>
         </div>
 
         <div class="card" id="card-selection">
@@ -126,14 +141,12 @@
             <button id="btn-generate" onclick="handleGenerateAnalysis()" class="btn-generate">⚡ Générer l'Analyse (1 Jeton)</button>
         </div>
 
-        <!-- ZONE COUPON COMBINE -->
+        <!-- ZONE COUPON COMBINÉ -->
         <div id="coupon-wrapper"></div>
 
         <div class="card">
             <h3>📅 Matchs Réels du Jour</h3>
-            <div id="matches-container">
-                <div style="text-align:center; padding:15px; color:#94a3b8;">⏳ Chargement...</div>
-            </div>
+            <div id="matches-container"></div>
         </div>
     </div>
 
@@ -141,9 +154,7 @@
     <div id="section-direct" class="page-section">
         <div class="card">
             <h3>🔴 Matchs en Direct</h3>
-            <div id="live-matches-container">
-                <div style="text-align:center; padding:15px; color:#94a3b8;">⚡ Recherche...</div>
-            </div>
+            <div id="live-matches-container"></div>
         </div>
     </div>
 
@@ -176,9 +187,7 @@
     </nav>
 
     <script>
-        const API_URL = "https://www.thesportsdb.com/api/v1/json/3/eventsday.php?s=Soccer&d=";
-
-        const EXTENDED_MATCHES = [
+        const MATCHES_DATA = [
             { home: "Paris SG", away: "Marseille", league: "⚽ Ligue 1 (France)" },
             { home: "Real Madrid", away: "FC Barcelona", league: "🇪🇸 La Liga (Espagne)" },
             { home: "Arsenal", away: "Manchester City", league: "🇬🇧 Premier League (Angleterre)" },
@@ -194,14 +203,6 @@
         ];
 
         let couponList = [];
-
-        function getTodayFormatted() {
-            const d = new Date();
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
 
         function getCredits() {
             const saved = localStorage.getItem('smartprono_credits');
@@ -219,33 +220,11 @@
             syncCreditsUI();
         }
 
-        async function fetchRealMatches() {
-            const today = getTodayFormatted();
-            try {
-                const response = await fetch(`${API_URL}${today}`);
-                const data = await response.json();
-                if (data && data.events && data.events.length > 0) {
-                    return data.events.map(e => ({
-                        home: e.strHomeTeam,
-                        away: e.strAwayTeam,
-                        league: e.strLeague || "Football"
-                    }));
-                }
-            } catch (err) {
-                console.log("Utilisation de la liste fallback");
-            }
-            return EXTENDED_MATCHES;
-        }
-
-        async function loadMatchesData() {
+        function renderMatchesList() {
             const container = document.getElementById('matches-container');
             const liveContainer = document.getElementById('live-matches-container');
 
-            const matches = await fetchRealMatches();
-
-            renderVIP(matches.slice(0, 2));
-
-            const html = matches.map(m => `
+            const html = MATCHES_DATA.map(m => `
                 <div style="background: #0f172a; margin: 8px 0; padding: 10px; border-radius: 6px; border: 1px solid #334155; display:flex; justify-content:space-between; align-items:center;">
                     <div style="flex:1; cursor:pointer;" onclick="selectMatch('${m.home.replace(/'/g, "\\'")}', '${m.away.replace(/'/g, "\\'")}')">
                         <div style="font-size: 0.75rem; color: #94a3b8;">${m.league}</div>
@@ -266,24 +245,6 @@
 
             if (container) container.innerHTML = html;
             if (liveContainer) liveContainer.innerHTML = html;
-        }
-
-        function renderVIP(vipList) {
-            const vipContainer = document.getElementById('vip-matches-container');
-            if (!vipContainer) return;
-
-            vipContainer.innerHTML = vipList.map(m => `
-                <div style="background: #0f172a; padding: 8px 10px; border-radius: 6px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #334155;">
-                    <div>
-                        <div style="font-size: 0.85rem; font-weight: bold;">${m.home} VS ${m.away}</div>
-                        <div style="font-size: 0.75rem; color: #22c55e; font-weight: bold;">💡 Conseil : Victoire ${m.home}</div>
-                    </div>
-                    <button onclick="selectMatch('${m.home.replace(/'/g, "\\'")}', '${m.away.replace(/'/g, "\\'")}')" 
-                            style="background:#eab308; color:#000; font-weight:bold; border:none; border-radius:4px; padding:4px 8px; font-size:0.7rem; cursor:pointer;">
-                        Analyser
-                    </button>
-                </div>
-            `).join('');
         }
 
         window.addToCoupon = function(home, away) {
@@ -411,4 +372,16 @@
                     </div>
                     <div style="display:flex; justify-content:space-between; font-size:0.75rem;">
                         <div style="color:#38bdf8;">🔵 ${home} : <strong>${winHome}%</strong></div>
-                        <d
+                        <div style="color:#eab308;">🟡 Nul : <strong>${draw}%</strong></div>
+                        <div style="color:#ef4444;">🔴 ${away} : <strong>${winAway}%</strong></div>
+                    </div>
+                </div>
+
+                <div style="background:#0f172a; padding:12px; border-radius:8px; border-left: 4px solid #22c55e; margin-bottom:12px;">
+                    <div style="font-size:0.75rem; color:#94a3b8; font-weight:bold;">🎯 CONSEIL SÉLECTIONNÉ</div>
+                    <div style="color:#22c55e; font-size:1rem; font-weight:bold; margin-top:4px;">${advice}</div>
+                    <div style="color:#cbd5e1; font-size:0.75rem; margin-top:4px;">Moyenne buts : <strong style="color:#38bdf8;">${goalsPredict}</strong></div>
+                </div>
+
+                <a href="https://api.whatsapp.com/send?text=${shareText}" target="_blank" 
+                   style="display:block; text-align:center; background:#22c55e; color:#000; font-weight:bold; padding:10px; border-radius:8px; text-decoration:none; fon
