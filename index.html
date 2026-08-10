@@ -88,6 +88,19 @@
             background: var(--inner-bg); color: var(--text-color); box-sizing: border-box; font-size: 0.9rem;
         }
 
+        /* FILTRES RAPIDES EN BADGES */
+        .league-pills {
+            display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px;
+            scrollbar-width: none;
+        }
+        .league-pills::-webkit-scrollbar { display: none; }
+        .pill {
+            white-space: nowrap; background: var(--inner-bg); border: 1px solid var(--border-color);
+            color: var(--text-muted); padding: 6px 12px; border-radius: 20px; font-size: 0.75rem;
+            font-weight: 600; cursor: pointer; transition: all 0.2s;
+        }
+        .pill.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
         .team-inputs { display: flex; gap: 10px; align-items: center; }
 
         .btn-generate {
@@ -160,9 +173,14 @@
 
         <div class="card">
             <h3>📅 Matchs Réels du Jour</h3>
-            <div class="form-group" style="margin-bottom: 10px;">
+            
+            <!-- FILTRES RAPIDES PAR BADGES -->
+            <div class="league-pills" id="league-pills-container"></div>
+
+            <div class="form-group" style="margin-bottom: 12px;">
                 <input type="text" id="search-input" placeholder="🔍 Rechercher une équipe..." oninput="filterMatches()">
             </div>
+            
             <div id="matches-container">
                 <div style="text-align:center; padding:15px; color:#94a3b8;">⏳ Chargement...</div>
             </div>
