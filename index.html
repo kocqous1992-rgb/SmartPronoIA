@@ -1,4 +1,4 @@
-<!<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -36,7 +36,6 @@
             margin: 0;
             padding: 15px;
             padding-bottom: 70px;
-            transition: background-color 0.3s, color 0.3s;
         }
 
         header {
@@ -114,14 +113,14 @@
 
     <!-- SECTION PRONOS -->
     <div id="section-pronos" class="page-section active">
-        <!-- BLOC PRONOS VIP / TOP CONFIANCE -->
+        <!-- BLOC PRONOS VIP -->
         <div class="card" style="border: 2px solid #eab308; background: linear-gradient(135deg, var(--card-bg) 0%, var(--inner-bg) 100%);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                 <h3 style="margin:0; color:#eab308;">🔥 Top Pronos VIP du Jour</h3>
                 <span style="background:#eab308; color:#000; font-size:0.7rem; font-weight:bold; padding:2px 8px; border-radius:10px;">95% Confiance</span>
             </div>
             <div id="vip-matches-container">
-                <div style="font-size:0.8rem; color:var(--text-muted); text-align:center;">Chargement des sélections VIP...</div>
+                <div style="font-size:0.8rem; color:var(--text-muted); text-align:center;">Chargement...</div>
             </div>
         </div>
 
@@ -167,7 +166,6 @@
             <h3>👤 Mon Compte</h3>
             <p id="user-email" style="color: var(--primary); font-weight: 500;">Non connecté</p>
             <p style="font-size: 0.9rem;">Solde actuel : <strong id="account-credits">10</strong> Jetons</p>
-            <button id="btn-login-account" class="btn-generate" onclick="window.loginWithGoogle()">🔑 Connexion Google</button>
         </div>
 
         <div class="card">
@@ -191,7 +189,6 @@
         <div id="tab-compte" class="tab-item" onclick="switchTab('compte')">Compte</div>
     </nav>
 
-    <script type="module" src="./firebase.js"></script>
-    <script type="module" src="./script.js"></script>
+    <script src="./script.js"></script>
 </body>
 </html>

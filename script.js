@@ -1,4 +1,249 @@
-color: var(--primary);">VS</span> ${match.strAwayTeam}
+const API_URL = "https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=";
+
+let currentLiveMatches = [];
+let couponMatches = [];
+let currentDateOffset = 0;
+
+const EXTENDED_LEAGUES = [
+    { value: "ALL", name: "🌐 Toutes les compétitions" },
+    { value: "Ligue 1", name: "⚽ Ligue 1 (France)" },
+    { value: "Premier League", name: "🇬🇧 Premier League (Angleterre)" },
+    { value: "La Liga", name: "🇪🇸 La Liga (Espagne)" },
+    { value: "Serie A", name: "🇮🇹 Serie A (Italie)" },
+    { value: "Bundesliga", name: "🇩🇪 Bundesliga (Allemagne)" },
+    { value: "UEFA Champions League", name: "🏆 Champions League" },
+    { value: "CAF Champions League", name: "🌍 Ligue des Champions CAF" },
+    { value: "Saudi Pro League", name: "🇸🇦 Saudi Pro League" }
+];
+
+document.addEventListener('DOMContentLoaded', () => {
+    initApp();
+});
+
+function initApp() {
+    initTheme();
+    populateLeagueSelect();
+    setupDateSelector();
+    loadRealMatches();
+    setupEventListeners();
+    loadLocalHistory();
+    syncCreditsUI();
+}
+
+// 1. Thème
+window.toggleTheme = function() {
+    const isLight = document.body.classList.toggle('light-theme');
+    const btnTheme = document.getElementById('btn-theme');
+    if (btnTheme) btnTheme.innerText = isLight ? '☀️' : '🌙';
+    localStorage.setItem('smartprono_theme', isLight ? 'light' : 'dark');
+};
+
+function initTheme() {
+    const savedTheme = localStorage.getItem('smartprono_theme');
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-theme');
+        const btnTheme = document.getElementById('btn-theme');
+        if (btnTheme) btnTheme.innerText = '☀️';
+    }
+}
+
+// 2. Dates
+function getFormattedDate(offset = 0) {
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function setupDateSelector() {
+    const matchesCard = document.querySelectorAll('#section-pronos .card')[2];
+    if (!matchesCard || document.getElementById('date-selector-bar')) return;
+
+    const dateBar = document.createElement('div');
+    dateBar.id = 'date-selector-bar';
+    dateBar.style.cssText = "display:flex; justify-content:space-between; margin-bottom:12px; gap:5px;";
+    dateBar.innerHTML = `
+        <button id="btn-yesterday" style="flex:1; padding:6px; background:var(--inner-bg); border:1px solid var(--border-color); color:var(--text-muted); border-radius:6px; font-size:0.75rem; cursor:pointer;">◀ Hier</button>
+        <button id="btn-today" style="flex:1; padding:6px; background:#2563eb; border:1px solid #2563eb; color:white; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Aujourd'hui</button>
+        <button id="btn-tomorrow" style="flex:1; padding:6px; background:var(--inner-bg); border:1px solid var(--border-color); color:var(--text-muted); border-radius:6px; font-size:0.75rem; cursor:pointer;">Demain ▶</button>
+    `;
+
+    matchesCard.querySelector('h3').after(dateBar);
+
+    document.getElementById('btn-yesterday').onclick = () => changeDate(-1);
+    document.getElementById('btn-today').onclick = () => changeDate(0);
+    document.getElementById('btn-tomorrow').onclick = () => changeDate(1);
+}
+
+function changeDate(offset) {
+    currentDateOffset = offset;
+    ['yesterday', 'today', 'tomorrow'].forEach((day, index) => {
+        const btn = document.getElementById(`btn-${day}`);
+        if (btn) {
+            const isActive = (index - 1) === offset;
+            btn.style.background = isActive ? '#2563eb' : 'var(--inner-bg)';
+            btn.style.color = isActive ? 'white' : 'var(--text-muted)';
+            btn.style.fontWeight = isActive ? 'bold' : 'normal';
+        }
+    });
+    loadRealMatches();
+}
+
+function populateLeagueSelect() {
+    const leagueSelect = document.getElementById('league-select');
+    if (!leagueSelect) return;
+
+    leagueSelect.innerHTML = EXTENDED_LEAGUES
+        .filter(l => l.value !== 'ALL')
+        .map(l => `<option value="${l.value}">${l.name}</option>`)
+        .join('');
+}
+
+// 3. Solde
+function syncCreditsUI() {
+    const savedCredits = localStorage.getItem('smartprono_credits');
+    const credits = savedCredits !== null ? parseInt(savedCredits, 10) : 10;
+    
+    const creditHeader = document.getElementById('credits-count');
+    const creditAccount = document.getElementById('account-credits');
+
+    if (creditHeader) creditHeader.innerText = credits;
+    if (creditAccount) creditAccount.innerText = credits;
+}
+
+function updateCredits(newTotal) {
+    localStorage.setItem('smartprono_credits', newTotal);
+    syncCreditsUI();
+}
+
+// 4. Navigation
+window.switchTab = function(tabName) {
+    document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
+    document.querySelectorAll('.tab-item').forEach(tab => tab.classList.remove('active'));
+
+    const targetSection = document.getElementById(`section-${tabName}`);
+    const targetTab = document.getElementById(`tab-${tabName}`);
+
+    if (targetSection) targetSection.classList.add('active');
+    if (targetTab) targetTab.classList.add('active');
+
+    if (tabName === 'direct') loadLiveMatches();
+    if (tabName === 'compte') {
+        loadLocalHistory();
+        syncCreditsUI();
+    }
+};
+
+// 5. Charger Matchs Réels + VIP
+async function loadRealMatches() {
+    const container = document.getElementById('matches-container');
+    if (!container) return;
+
+    container.innerHTML = `<div style="text-align:center; padding: 15px; color: var(--text-muted);">⏳ Chargement...</div>`;
+
+    const targetDate = getFormattedDate(currentDateOffset);
+
+    try {
+        const response = await fetch(`${API_URL}${targetDate}&s=Soccer`);
+        const data = await response.json();
+        const matches = data.events || [];
+        renderMatches(matches, container);
+        renderVIPMatches(matches);
+    } catch (error) {
+        container.innerHTML = `<div style="text-align:center; padding: 15px; color: var(--text-muted);">Aucun match disponible.</div>`;
+    }
+}
+
+function renderVIPMatches(matches) {
+    const vipContainer = document.getElementById('vip-matches-container');
+    if (!vipContainer) return;
+
+    if (!matches || matches.length === 0) {
+        vipContainer.innerHTML = `<div style="font-size:0.8rem; color:var(--text-muted); text-align:center;">Aucun prono VIP disponible.</div>`;
+        return;
+    }
+
+    const vipList = matches.slice(0, 2);
+    vipContainer.innerHTML = vipList.map(m => `
+        <div style="background:var(--inner-bg); border:1px solid var(--border-color); padding:8px 10px; border-radius:6px; margin-top:6px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <div style="font-size:0.85rem; font-weight:bold; color:var(--text-color);">${m.strHomeTeam} VS ${m.strAwayTeam}</div>
+                <div style="font-size:0.75rem; color:#22c55e; font-weight:bold;">💡 Conseil : Victoire ${m.strHomeTeam}</div>
+            </div>
+            <button onclick="selectMatch('${m.strHomeTeam.replace(/'/g, "\\'")}', '${m.strAwayTeam.replace(/'/g, "\\'")}')" 
+                    style="background:#eab308; color:#000; font-weight:bold; border:none; border-radius:4px; padding:4px 8px; font-size:0.7rem; cursor:pointer;">
+                Analyser
+            </button>
+        </div>
+    `).join('');
+}
+
+// 6. Direct
+async function loadLiveMatches() {
+    const container = document.getElementById('live-matches-container');
+    if (!container) return;
+
+    let filterElem = document.getElementById('live-league-filter');
+    if (!filterElem) {
+        const filterCard = document.createElement('div');
+        filterCard.style.cssText = "margin-bottom: 12px;";
+        filterCard.innerHTML = `
+            <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;">Filtrer par championnat :</label>
+            <select id="live-league-filter" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border-color); background:var(--inner-bg); color:var(--text-color); font-size:0.9rem;">
+                ${EXTENDED_LEAGUES.map(l => `<option value="${l.value}">${l.name}</option>`).join('')}
+            </select>
+        `;
+        container.before(filterCard);
+        
+        filterElem = document.getElementById('live-league-filter');
+        filterElem.addEventListener('change', (e) => filterLiveMatches(e.target.value));
+    }
+
+    container.innerHTML = `<div style="text-align:center; padding: 15px; color: var(--text-muted);">⚡ Recherche...</div>`;
+
+    const today = getFormattedDate(0);
+
+    try {
+        const response = await fetch(`${API_URL}${today}&s=Soccer`);
+        const data = await response.json();
+        currentLiveMatches = data.events || [];
+        filterLiveMatches(filterElem ? filterElem.value : 'ALL');
+    } catch (error) {
+        container.innerHTML = `<div style="text-align:center; padding: 15px; color: var(--text-muted);">Aucun match en direct.</div>`;
+    }
+}
+
+function filterLiveMatches(leagueQuery) {
+    const container = document.getElementById('live-matches-container');
+    if (!container) return;
+
+    if (currentLiveMatches.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding: 15px; color: var(--text-muted);">Aucun match au programme.</div>`;
+        return;
+    }
+
+    let filtered = currentLiveMatches;
+    if (leagueQuery !== 'ALL') {
+        filtered = currentLiveMatches.filter(m => m.strLeague && m.strLeague.toLowerCase().includes(leagueQuery.toLowerCase()));
+    }
+
+    renderMatches(filtered, container);
+}
+
+function renderMatches(matches, container) {
+    if (!matches || matches.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding: 15px; color: var(--text-muted);">Aucun match disponible.</div>`;
+        return;
+    }
+
+    container.innerHTML = matches.slice(0, 15).map(match => `
+        <div style="background: var(--inner-bg); margin: 8px 0; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+            <div style="flex:1; cursor:pointer;" onclick="selectMatch('${match.strHomeTeam.replace(/'/g, "\\'")}', '${match.strAwayTeam.replace(/'/g, "\\'")}')">
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 2px;">${match.strLeague || "Football"}</div>
+                <div style="font-size: 0.85rem; font-weight: 600; color:var(--text-color);">
+                    ${match.strHomeTeam} <span style="color: var(--primary);">VS</span> ${match.strAwayTeam}
                 </div>
             </div>
             <button onclick="addToCoupon('${match.strHomeTeam.replace(/'/g, "\\'")}', '${match.strAwayTeam.replace(/'/g, "\\'")}')" 
@@ -15,7 +260,7 @@ window.selectMatch = function(home, away) {
     document.getElementById('away-team').value = away;
 };
 
-// 7. Pronostics IA + Rechargement + Historique
+// 7. Générer Pronostic
 function handleGenerateAnalysis() {
     const home = document.getElementById('home-team')?.value.trim();
     const away = document.getElementById('away-team')?.value.trim();
@@ -99,4 +344,102 @@ function displayAIResult(data) {
         </a>
     `;
 
+    document.querySelectorAll('#section-pronos .card')[1].after(card);
+    card.scrollIntoView({ behavior: 'smooth' });
+}
+
+window.addToCoupon = function(home, away) {
+    if (couponMatches.length >= 4) return alert("Maximum 4 matchs par coupon.");
+    if (couponMatches.some(m => m.home === home && m.away === away)) return alert("Déjà dans le coupon.");
+
+    const odds = (Math.random() * 0.4 + 1.35).toFixed(2);
+    const adviceOptions = [`Victoire ${home}`, 'Plus de 1.5 Buts', 'Les deux équipes marquant'];
+    const advice = adviceOptions[Math.floor(Math.random() * adviceOptions.length)];
+
+    couponMatches.push({ home, away, odds, advice });
+    renderCouponCard();
+};
+
+window.removeFromCoupon = function(index) {
+    couponMatches.splice(index, 1);
+    renderCouponCard();
+};
+
+function renderCouponCard() {
+    let couponCard = document.getElementById('combiner-coupon-card');
+
+    if (couponMatches.length === 0) {
+        if (couponCard) couponCard.remove();
+        return;
+    }
+
+    if (!couponCard) {
+        couponCard = document.createElement('div');
+        couponCard.id = 'combiner-coupon-card';
+        couponCard.style.cssText = "background: var(--card-bg); border: 2px solid #eab308; border-radius: 12px; padding: 15px; margin-top: 15px;";
+        document.querySelectorAll('#section-pronos .card')[1].before(couponCard);
+    }
+
+    let totalOdds = couponMatches.reduce((acc, m) => acc * parseFloat(m.odds), 1).toFixed(2);
+
+    couponCard.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h4 style="margin:0; color:#eab308;">🎟️ Coupon Combiné (${couponMatches.length}/4)</h4>
+            <span style="font-size:0.8rem; color:var(--text-color);">Cote : <strong style="color:#22c55e; font-size:1rem;">${totalOdds}</strong></span>
+        </div>
+        ${couponMatches.map((m, i) => `
+            <div style="background:var(--inner-bg); padding:8px; border-radius:6px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; font-size:0.8rem;">
+                <div>
+                    <div><strong>${m.home} VS ${m.away}</strong></div>
+                    <div style="color:#22c55e;">💡 ${m.advice} (${m.odds})</div>
+                </div>
+                <button onclick="removeFromCoupon(${i})" style="background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; cursor:pointer;">❌</button>
+            </div>
+        `).join('')}
+    `;
+}
+
+window.handleRechargeTokens = function() {
+    const btn = document.querySelector('.btn-recharge');
+    if (!btn) return;
+
+    btn.disabled = true;
+    let secondsLeft = 5;
+
+    const interval = setInterval(() => {
+        btn.innerText = `⏳ Visionnage (${secondsLeft}s)...`;
+        secondsLeft--;
+
+        if (secondsLeft < 0) {
+            clearInterval(interval);
+            const currentCredits = parseInt(document.getElementById('credits-count').innerText, 10);
+            updateCredits(currentCredits + 5);
+
+            btn.innerText = `🎬 Obtenir +5 Jetons`;
+            btn.disabled = false;
+            alert("🎉 FÉLICITATIONS ! +5 Jetons ajoutés à votre solde.");
+        }
+    }, 1000);
+};
+
+function saveToLocalHistory(item) {
+    let history = JSON.parse(localStorage.getItem('smartprono_history')) || [];
+    history.unshift(item);
+    if (history.length > 10) history.pop();
+    localStorage.setItem('smartprono_history', JSON.stringify(history));
+}
+
+function loadLocalHistory() {
+    let historyContainer = document.getElementById('history-container');
+    if (!historyContainer) return;
+
+    let history = JSON.parse(localStorage.getItem('smartprono_history')) || [];
+
+    if (history.length === 0) {
+        historyContainer.innerHTML = `<div style="text-align:center; padding: 10px; color: var(--text-muted); font-size: 0.85rem;">Aucune analyse enregistrée.</div>`;
+        return;
+    }
+
+    historyContainer.innerHTML = history.map(item => `
+        <div style="background: var(--inner-bg); border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; margin-bottom: 8px;">
     
