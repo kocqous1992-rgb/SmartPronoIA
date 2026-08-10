@@ -10,7 +10,7 @@ const EXTENDED_LEAGUES = [
     { value: "Saudi Pro League", name: "🇸🇦 Saudi League" }
 ];
 
-const FALLBACK_MATCHES = [
+const MATCHES_DATA = [
     { home: "Paris SG", away: "Marseille", league: "Ligue 1", leagueName: "⚽ Ligue 1 (France)" },
     { home: "Lyon", away: "Monaco", league: "Ligue 1", leagueName: "⚽ Ligue 1 (France)" },
     { home: "Real Madrid", away: "FC Barcelona", league: "La Liga", leagueName: "🇪🇸 La Liga (Espagne)" },
@@ -25,14 +25,14 @@ const FALLBACK_MATCHES = [
     { home: "Al Hilal", away: "Al Nassr", league: "Saudi Pro League", leagueName: "🇸🇦 Saudi Pro League" }
 ];
 
-let globalMatchesData = [];
-let liveMatchesData = [];
 let couponList = [];
 let currentFilterLeague = "ALL";
 
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
     populateLeagueSelect();
     renderLeaguePills();
+    renderMatchesList(MATCHES_DATA);
+    renderLiveMatchesList();
     syncCreditsUI();
     setupEventListeners();
     loadHistoryUI();
@@ -40,109 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (localStorage.getItem('smartprono_theme') === 'light') {
         document.body.classList.add('light-mode');
     }
-
-    await initMatchesData();
 });
-
-function getTodayDateString() {
-    const d = new Date();
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
-async function initMatchesData() {
-    const today = getTodayDateString();
-    const apiUrl = `https://www.thesportsdb.com/api/v1/json/3/eventsday.php?s=Soccer&d=${today}`;
-
-    try {
-        const response = await fetch(apiUrl);
-        const data = await response.json();
-
-        if (data && data.events && data.events.length > 0) {
-            globalMatchesData = data.events.map(e => ({
-                home: e.strHomeTeam,
-                away: e.strAwayTeam,
-                league: e.strLeague || "ALL",
-                leagueName: e.strLeague || "⚽ Football",
-                status: e.strStatus || ""
-            }));
-        } else {
-            globalMatchesData = FALLBACK_MATCHES;
-        }
-    } catch (error) {
-        globalMatchesData = FALLBACK_MATCHES;
-    }
-
-    renderMatchesList(globalMatchesData);
-    fetchLiveMatches();
-}
-
-// RECUPERATION ET FILTRAGE DES MATCHS EN DIRECT
-async function fetchLiveMatches() {
-    const liveContainer = document.getElementById('live-matches-container');
-    const liveApiUrl = `https://www.thesportsdb.com/api/v1/json/3/eventslivesoccer.php`;
-
-    try {
-        const response = await fetch(liveApiUrl);
-        const data = await response.json();
-
-        if (data && data.events && data.events.length > 0) {
-            liveMatchesData = data.events.map(e => ({
-                home: e.strHomeTeam,
-                away: e.strAwayTeam,
-                leagueName: e.strLeague || "🔴 En Direct",
-                scoreHome: e.intHomeScore ?? 0,
-                scoreAway: e.intAwayScore ?? 0,
-                progress: e.strProgress || "En cours"
-            }));
-            renderLiveMatchesList(liveMatchesData);
-        } else {
-            // Si aucun match n'est en direct via l'API, afficher une sélection de simulation en direct
-            const simulatedLive = globalMatchesData.slice(0, 3).map(m => ({
-                ...m,
-                scoreHome: Math.floor(Math.random() * 3),
-                scoreAway: Math.floor(Math.random() * 2),
-                progress: `${Math.floor(Math.random() * 70) + 10}'`
-            }));
-            renderLiveMatchesList(simulatedLive);
-        }
-    } catch (error) {
-        const simulatedLive = globalMatchesData.slice(0, 3).map(m => ({
-            ...m,
-            scoreHome: Math.floor(Math.random() * 3),
-            scoreAway: Math.floor(Math.random() * 2),
-            progress: `${Math.floor(Math.random() * 70) + 10}'`
-        }));
-        renderLiveMatchesList(simulatedLive);
-    }
-}
-
-function renderLiveMatchesList(list) {
-    const liveContainer = document.getElementById('live-matches-container');
-    if (!liveContainer) return;
-
-    if (!list || list.length === 0) {
-        liveContainer.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Aucun match en direct pour le moment.</div>`;
-        return;
-    }
-
-    liveContainer.innerHTML = list.map(m => `
-        <div style="background: var(--inner-bg); margin: 8px 0; padding: 12px; border-radius: 6px; border: 1px solid #ef4444;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <span style="font-size:0.75rem; color:var(--text-muted);">${m.leagueName}</span>
-                <span style="background:#ef4444; color:white; font-size:0.65rem; font-weight:bold; padding:2px 6px; border-radius:10px;">🔴 ${m.progress}</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div style="font-size: 0.9rem; font-weight: bold; flex:1;">
-                    ${m.home} <span style="color:#ef4444; margin:0 5px;">${m.scoreHome} - ${m.scoreAway}</span> ${m.away}
-                </div>
-                <button onclick="selectMatch('${m.home.replace(/'/g, "\\'")}', '${m.away.replace(/'/g, "\\'")}')" style="background:var(--card-bg); color:var(--primary); border:1px solid var(--primary); padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Analyser</button>
-            </div>
-        </div>
-    `).join('');
-}
 
 window.toggleTheme = function() {
     document.body.classList.toggle('light-mode');
@@ -183,10 +81,10 @@ window.filterMatches = function() {
 
     const searchInput = document.getElementById('search-input')?.value.toLowerCase().trim() || '';
 
-    let filtered = globalMatchesData;
+    let filtered = MATCHES_DATA;
 
     if (selectedLeague !== 'ALL') {
-        filtered = filtered.filter(m => m.league.toLowerCase().includes(selectedLeague.toLowerCase()));
+        filtered = filtered.filter(m => m.league === selectedLeague);
     }
 
     if (searchInput !== '') {
@@ -203,7 +101,7 @@ function renderMatchesList(list) {
     const container = document.getElementById('matches-container');
 
     if (!list || list.length === 0) {
-        if (container) container.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Aucun match trouvé pour cette sélection.</div>`;
+        if (container) container.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Aucun match trouvé.</div>`;
         return;
     }
 
@@ -221,6 +119,29 @@ function renderMatchesList(list) {
     `).join('');
 
     if (container) container.innerHTML = html;
+}
+
+function renderLiveMatchesList() {
+    const liveContainer = document.getElementById('live-matches-container');
+    if (!liveContainer) return;
+
+    // Affiche les 3 premiers matchs comme étant en direct
+    const liveSelection = MATCHES_DATA.slice(0, 3);
+
+    liveContainer.innerHTML = liveSelection.map((m, i) => `
+        <div style="background: var(--inner-bg); margin: 8px 0; padding: 12px; border-radius: 6px; border: 1px solid #ef4444;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <span style="font-size:0.75rem; color:var(--text-muted);">${m.leagueName}</span>
+                <span style="background:#ef4444; color:white; font-size:0.65rem; font-weight:bold; padding:2px 6px; border-radius:10px;">🔴 En direct</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-size: 0.85rem; font-weight: bold; flex:1;">
+                    ${m.home} <span style="color:var(--primary);">VS</span> ${m.away}
+                </div>
+                <button onclick="selectMatch('${m.home.replace(/'/g, "\\'")}', '${m.away.replace(/'/g, "\\'")}')" style="background:var(--card-bg); color:var(--primary); border:1px solid var(--primary); padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Analyser</button>
+            </div>
+        </div>
+    `).join('');
 }
 
 window.addToCoupon = function(home, away) {
@@ -297,7 +218,6 @@ window.switchTab = function(tabName) {
     if (targetSection) targetSection.classList.add('active');
     if (targetTab) targetTab.classList.add('active');
 
-    if (tabName === 'direct') fetchLiveMatches();
     if (tabName === 'compte') loadHistoryUI();
 };
 
@@ -430,4 +350,46 @@ function loadHistoryUI() {
     }
 
     container.innerHTML = history.map(h => `
-        <div style="background:var(--inner-bg); border:1px solid var(--border-color); padding:8px 10px; border-radius:6px; marg
+        <div style="background:var(--inner-bg); border:1px solid var(--border-color); padding:8px 10px; border-radius:6px; margin-bottom:6px;">
+            <div style="font-weight:bold; font-size:0.85rem; color:var(--primary);">${h.home} VS ${h.away}</div>
+            <div style="font-size:0.8rem; color:var(--accent);">💡 ${h.advice} (${h.confidence}% Confiance)</div>
+            <div style="font-size:0.7rem; color:var(--text-muted);">Généré le ${h.date}</div>
+        </div>
+    `).join('');
+}
+
+window.clearHistory = function() {
+    localStorage.removeItem('smartprono_history');
+    loadHistoryUI();
+};
+
+function setupEventListeners() {
+    document.getElementById('btn-generate')?.addEventListener('click', handleGenerateAnalysis);
+
+    const btnRechargeAd = document.getElementById('btn-recharge-ad');
+    if (btnRechargeAd) {
+        btnRechargeAd.onclick = () => {
+            btnRechargeAd.disabled = true;
+
+            if (typeof show_8854321 === 'function') {
+                show_8854321().then(() => {
+                    updateCredits(getCredits() + 5);
+                    btnRechargeAd.disabled = false;
+                });
+            } else {
+                let timer = 5;
+                const interval = setInterval(() => {
+                    btnRechargeAd.innerText = `⏳ Pub en cours (${timer}s)...`;
+                    timer--;
+                    if (timer < 0) {
+                        clearInterval(interval);
+                        updateCredits(getCredits() + 5);
+                        btnRechargeAd.innerText = `🎬 Regarder une pub (+5 Jetons)`;
+                        btnRechargeAd.disabled = false;
+                        alert("🎉 FÉLICITATIONS ! +5 Jetons ont été crédités à votre compte.");
+                    }
+                }, 1000);
+            }
+        };
+    }
+}
