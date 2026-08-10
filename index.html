@@ -1,9 +1,11 @@
-<!DOCTYPE html>
+<!<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmartPronoIA</title>
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#0f172a">
     <style>
         :root {
             --bg-color: #0f172a;
@@ -12,6 +14,19 @@
             --accent: #22c55e;
             --text-color: #f8fafc;
             --text-muted: #94a3b8;
+            --border-color: #334155;
+            --inner-bg: #0f172a;
+        }
+
+        body.light-theme {
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --primary: #0284c7;
+            --accent: #16a34a;
+            --text-color: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --inner-bg: #f8fafc;
         }
 
         body {
@@ -21,6 +36,7 @@
             margin: 0;
             padding: 15px;
             padding-bottom: 70px;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         header {
@@ -28,18 +44,28 @@
             justify-content: space-between;
             align-items: center;
             padding-bottom: 15px;
-            border-bottom: 1px solid #334155;
+            border-bottom: 1px solid var(--border-color);
             margin-bottom: 15px;
         }
 
         .logo { font-size: 1.1rem; font-weight: bold; color: var(--primary); }
-        .user-badge { background: #334155; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+        .user-badge { background: var(--border-color); padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+
+        .btn-theme-toggle {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 5px 10px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
 
         .card {
             background-color: var(--card-bg);
             border-radius: 12px;
             padding: 15px;
-            border: 1px solid #334155;
+            border: 1px solid var(--border-color);
             margin-bottom: 15px;
         }
 
@@ -48,8 +74,8 @@
         .form-group { margin-bottom: 12px; }
         label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px; }
         select, input {
-            width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #334155;
-            background: #0f172a; color: white; box-sizing: border-box; font-size: 0.9rem;
+            width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);
+            background: var(--inner-bg); color: var(--text-color); box-sizing: border-box; font-size: 0.9rem;
         }
 
         .team-inputs { display: flex; gap: 10px; align-items: center; }
@@ -68,8 +94,8 @@
         .page-section.active { display: block; }
 
         .nav-tabs {
-            position: fixed; bottom: 0; left: 0; right: 0; background: #0f172a;
-            display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #334155; z-index: 1000;
+            position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-color);
+            display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid var(--border-color); z-index: 1000;
         }
 
         .tab-item { color: var(--text-muted); font-size: 0.85rem; text-align: center; cursor: pointer; flex: 1; }
@@ -80,21 +106,30 @@
 
     <header>
         <div class="logo">⚽ SmartPronoIA</div>
-        <div class="user-badge"><span id="credits-count">10</span> 🪙 Jetons</div>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <button id="btn-theme" class="btn-theme-toggle" onclick="toggleTheme()">🌙</button>
+            <div class="user-badge"><span id="credits-count">10</span> 🪙 Jetons</div>
+        </div>
     </header>
 
     <!-- SECTION PRONOS -->
     <div id="section-pronos" class="page-section active">
+        <!-- BLOC PRONOS VIP / TOP CONFIANCE -->
+        <div class="card" style="border: 2px solid #eab308; background: linear-gradient(135deg, var(--card-bg) 0%, var(--inner-bg) 100%);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <h3 style="margin:0; color:#eab308;">🔥 Top Pronos VIP du Jour</h3>
+                <span style="background:#eab308; color:#000; font-size:0.7rem; font-weight:bold; padding:2px 8px; border-radius:10px;">95% Confiance</span>
+            </div>
+            <div id="vip-matches-container">
+                <div style="font-size:0.8rem; color:var(--text-muted); text-align:center;">Chargement des sélections VIP...</div>
+            </div>
+        </div>
+
         <div class="card">
             <h3>📊 Sélection Rapide</h3>
             <div class="form-group">
                 <label>Championnat :</label>
-                <select id="league-select">
-                    <option value="FL1">⚽ Ligue 1 (France)</option>
-                    <option value="CL">🏆 UEFA Champions League</option>
-                    <option value="PL">🇬🇧 Premier League (Angleterre)</option>
-                    <option value="PD">🇪🇸 La Liga (Espagne)</option>
-                </select>
+                <select id="league-select"></select>
             </div>
 
             <div class="form-group">
