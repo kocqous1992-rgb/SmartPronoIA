@@ -1,16 +1,15 @@
 const EXTENDED_LEAGUES = [
-    { value: "ALL", name: "🌐 Toutes les compétitions" },
-    { value: "Ligue 1", name: "⚽ Ligue 1 (France)" },
-    { value: "Premier League", name: "🇬🇧 Premier League (Angleterre)" },
-    { value: "La Liga", name: "🇪🇸 La Liga (Espagne)" },
-    { value: "Serie A", name: "🇮🇹 Serie A (Italie)" },
-    { value: "Bundesliga", name: "🇩🇪 Bundesliga (Allemagne)" },
+    { value: "ALL", name: "🌐 Toutes" },
+    { value: "Ligue 1", name: "⚽ Ligue 1" },
+    { value: "Premier League", name: "🇬🇧 Premier League" },
+    { value: "La Liga", name: "🇪🇸 La Liga" },
+    { value: "Serie A", name: "🇮🇹 Serie A" },
+    { value: "Bundesliga", name: "🇩🇪 Bundesliga" },
     { value: "UEFA Champions League", name: "🏆 Champions League" },
-    { value: "CAF Champions League", name: "🌍 Ligue des Champions CAF" },
-    { value: "Saudi Pro League", name: "🇸🇦 Saudi Pro League" }
+    { value: "CAF Champions League", name: "🌍 CAF" },
+    { value: "Saudi Pro League", name: "🇸🇦 Saudi League" }
 ];
 
-// LISTE ÉTENDUE DE 12 MATCHS RÉELS
 const MATCHES_DATA = [
     { home: "Paris SG", away: "Marseille", league: "Ligue 1", leagueName: "⚽ Ligue 1 (France)" },
     { home: "Lyon", away: "Monaco", league: "Ligue 1", leagueName: "⚽ Ligue 1 (France)" },
@@ -27,14 +26,16 @@ const MATCHES_DATA = [
 ];
 
 let couponList = [];
+let currentFilterLeague = "ALL";
 
 document.addEventListener('DOMContentLoaded', () => {
     populateLeagueSelect();
+    renderLeaguePills();
     renderMatchesList(MATCHES_DATA);
     syncCreditsUI();
     setupEventListeners();
     loadHistoryUI();
-    
+
     if (localStorage.getItem('smartprono_theme') === 'light') {
         document.body.classList.add('light-mode');
     }
@@ -52,8 +53,31 @@ function populateLeagueSelect() {
     select.innerHTML = EXTENDED_LEAGUES.map(l => `<option value="${l.value}">${l.name}</option>`).join('');
 }
 
+function renderLeaguePills() {
+    const container = document.getElementById('league-pills-container');
+    if (!container) return;
+
+    container.innerHTML = EXTENDED_LEAGUES.map(l => `
+        <div class="pill ${l.value === currentFilterLeague ? 'active' : ''}" onclick="selectLeaguePill('${l.value}')">
+            ${l.name}
+        </div>
+    `).join('');
+}
+
+window.selectLeaguePill = function(leagueValue) {
+    currentFilterLeague = leagueValue;
+    const select = document.getElementById('league-select');
+    if (select) select.value = leagueValue;
+    
+    renderLeaguePills();
+    filterMatches();
+};
+
 window.filterMatches = function() {
     const selectedLeague = document.getElementById('league-select').value;
+    currentFilterLeague = selectedLeague;
+    renderLeaguePills();
+
     const searchInput = document.getElementById('search-input')?.value.toLowerCase().trim() || '';
 
     let filtered = MATCHES_DATA;
@@ -77,7 +101,7 @@ function renderMatchesList(list) {
     const liveContainer = document.getElementById('live-matches-container');
 
     if (!list || list.length === 0) {
-        if (container) container.innerHTML = `<div style="text-align:center; padding:15px; color:#94a3b8;">Aucun match trouvé.</div>`;
+        if (container) container.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Aucun match trouvé.</div>`;
         return;
     }
 
@@ -220,7 +244,8 @@ function handleGenerateAnalysis() {
     const oldCard = document.getElementById('ai-result-card');
     if (oldCard) oldCard.remove();
 
-    const shareText = encodeURIComponent(`⚽ Pronostic SmartPronoIA\n${home} vs ${away}\n🎯 Conseil: ${advice}\n🔥 Confiance: ${confidence}%`);
+    const plainText = `⚽ SmartPronoIA\n${home} vs ${away}\n🎯 Conseil: ${advice}\n🔥 Confiance: ${confidence}%`;
+    const shareText = encodeURIComponent(plainText);
 
     const card = document.createElement('div');
     card.id = 'ai-result-card';
@@ -261,15 +286,29 @@ function handleGenerateAnalysis() {
             <div style="color:var(--text-color); font-size:0.75rem; margin-top:4px;">Moyenne buts : <strong style="color:var(--primary);">${goalsPredict}</strong></div>
         </div>
 
-        <a href="https://api.whatsapp.com/send?text=${shareText}" target="_blank" 
-           style="display:block; text-align:center; background:var(--accent); color:#000; font-weight:bold; padding:10px; border-radius:8px; text-decoration:none; font-size:0.85rem;">
-            📲 Partager le Pronostic sur WhatsApp
-        </a>
+        <div style="display:flex; gap:8px;">
+            <a href="https://api.whatsapp.com/send?text=${shareText}" target="_blank" 
+               style="flex:2; text-align:center; background:var(--accent); color:#000; font-weight:bold; padding:10px; border-radius:8px; text-decoration:none; font-size:0.8rem;">
+                📲 Partager sur WhatsApp
+            </a>
+            <button onclick="copyToClipboard('${plainText.replace(/\n/g, '\\n')}')" 
+                    style="flex:1; background:var(--inner-bg); color:var(--text-color); border:1px solid var(--border-color); font-weight:bold; padding:10px; border-radius:8px; font-size:0.8rem; cursor:pointer;">
+                📋 Copier
+            </button>
+        </div>
     `;
 
     document.getElementById('card-selection').after(card);
     card.scrollIntoView({ behavior: 'smooth' });
 }
+
+window.copyToClipboard = function(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert("📋 Pronostic copié dans le presse-papier !");
+    }).catch(() => {
+        alert("Impossible de copier automatiquement.");
+    });
+};
 
 function saveAnalysisToHistory(item) {
     let history = JSON.parse(localStorage.getItem('smartprono_history')) || [];
