@@ -1,18 +1,18 @@
-const FOOTBALL_DATA_KEY = "88a99558649e4852a930945114486f17";
-
-const EXTENDED_LEAGUES = [
-    { value: "ALL", name: "🌐 Toutes" },
-    { value: "FL1", name: "⚽ Ligue 1" },
-    { value: "PL", name: "🇬🇧 Premier League" },
-    { value: "PD", name: "🇪🇸 La Liga" },
-    { value: "SA", name: "🇮🇹 Serie A" },
-    { value: "BL1", name: "🇩🇪 Bundesliga" },
-    { value: "CL", name: "🏆 Champions League" }
-];
+const SCOREBAT_API_URL = "https://www.scorebat.com/video-api/v3/feed/?token=MTc5NTI0XzE3MjM0MDExMjFfN2NlZGU1NTcxNGNmMWFlZGY0MDlhZmViNGRhYWE3NTQ3ZGNkMGQzMg==";
 
 let realMatchesList = [];
 let couponList = [];
 let currentFilterLeague = "ALL";
+
+const EXTENDED_LEAGUES = [
+    { value: "ALL", name: "🌐 Toutes" },
+    { value: "ENGLAND", name: "🇬🇧 Premier League" },
+    { value: "SPAIN", name: "🇪🇸 La Liga" },
+    { value: "FRANCE", name: "⚽ Ligue 1" },
+    { value: "ITALY", name: "🇮🇹 Serie A" },
+    { value: "GERMANY", name: "🇩🇪 Bundesliga" },
+    { value: "CHAMPIONS LEAGUE", name: "🏆 Champions League" }
+];
 
 document.addEventListener('DOMContentLoaded', () => {
     populateLeagueSelect();
@@ -28,22 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
     loadTodayMatches();
 });
 
-function getTodayFormattedDate() {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
-async function fetchWithCorsProxy(targetUrl, headers = {}) {
-    // Contournement du blocage CORS via proxy
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
-    const response = await fetch(proxyUrl, { headers });
-    if (!response.ok) throw new Error("Erreur HTTP " + response.status);
-    return await response.json();
-}
-
 async function loadTodayMatches() {
     const container = document.getElementById('matches-container');
     const vipContainer = document.getElementById('vip-matches-list');
@@ -53,27 +37,24 @@ async function loadTodayMatches() {
         container.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">⏳ Chargement des matchs réels...</div>`;
     }
 
-    const dateStr = getTodayFormattedDate();
-    const targetApiUrl = `https://api.football-data.org/v4/matches?dateFrom=${dateStr}&dateTo=${dateStr}`;
-
     try {
-        const data = await fetchWithCorsProxy(targetApiUrl, {
-            'X-Auth-Token': FOOTBALL_DATA_KEY
-        });
+        const response = await fetch(SCOREBAT_API_URL);
+        if (!response.ok) throw new Error("Erreur HTTP " + response.status);
 
-        if (data && data.matches && data.matches.length > 0) {
-            realMatchesList = data.matches.map(m => {
-                const matchTime = m.utcDate ? new Date(m.utcDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "";
+        const data = await response.json();
+
+        if (data && data.response && data.response.length > 0) {
+            realMatchesList = data.response.map((m, idx) => {
+                const matchDate = m.date ? new Date(m.date) : new Date();
+                const timeStr = matchDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
                 return {
-                    id: m.id,
-                    home: m.homeTeam.name,
-                    away: m.awayTeam.name,
-                    leagueCode: m.competition ? m.competition.code : "ALL",
-                    leagueName: m.competition ? `⚽ ${m.competition.name}` : "⚽ Football",
-                    time: matchTime,
-                    status: m.status,
-                    scoreHome: m.score && m.score.fullTime && m.score.fullTime.home !== null ? m.score.fullTime.home : 0,
-                    scoreAway: m.score && m.score.fullTime && m.score.fullTime.away !== null ? m.score.fullTime.away : 0
+                    id: idx,
+                    home: m.side1 ? m.side1.name : "Équipe 1",
+                    away: m.side2 ? m.side2.name : "Équipe 2",
+                    leagueName: m.competition ? `⚽ ${m.competition}` : "⚽ Football",
+                    time: timeStr,
+                    title: m.title || ""
                 };
             });
 
@@ -85,34 +66,8 @@ async function loadTodayMatches() {
             showEmptyState("Aucun match disponible pour cette date.");
         }
     } catch (err) {
-        // Tentative de secours automatique via TheSportsDB
-        try {
-            const fallbackUrl = `https://www.thesportsdb.com/api/v1/json/3/eventsday.php?s=Soccer&d=${dateStr}`;
-            const fallbackData = await fetchWithCorsProxy(fallbackUrl);
-
-            if (fallbackData && fallbackData.events && fallbackData.events.length > 0) {
-                realMatchesList = fallbackData.events.map(e => ({
-                    id: e.idEvent,
-                    home: e.strHomeTeam,
-                    away: e.strAwayTeam,
-                    leagueCode: "ALL",
-                    leagueName: e.strLeague ? `⚽ ${e.strLeague}` : "⚽ Football",
-                    time: e.strTime ? e.strTime.substring(0, 5) : "",
-                    status: e.strStatus || "",
-                    scoreHome: 0,
-                    scoreAway: 0
-                }));
-
-                renderMatchesList(realMatchesList);
-                renderVIPMatches(realMatchesList);
-                renderLiveMatchesList(realMatchesList);
-            } else {
-                showEmptyState("Aucun match disponible pour cette date.");
-            }
-        } catch (fallbackErr) {
-            realMatchesList = [];
-            showErrorState();
-        }
+        realMatchesList = [];
+        showErrorState();
     }
 }
 
@@ -193,15 +148,14 @@ function renderLiveMatchesList(list) {
     const liveContainer = document.getElementById('live-matches-container');
     if (!liveContainer) return;
 
-    const liveStatuses = ["IN_PLAY", "PAUSED", "LIVE", "1H", "2H", "HT"];
-    const liveList = list.filter(m => liveStatuses.includes(m.status));
-
-    if (!liveList || liveList.length === 0) {
+    if (!list || list.length === 0) {
         liveContainer.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Aucun match disponible pour cette date.</div>`;
         return;
     }
 
-    liveContainer.innerHTML = liveList.map(m => `
+    const liveSelection = list.slice(0, 4);
+
+    liveContainer.innerHTML = liveSelection.map(m => `
         <div style="background: var(--inner-bg); margin: 8px 0; padding: 12px; border-radius: 6px; border: 1px solid #ef4444;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                 <span style="font-size:0.75rem; color:var(--text-muted);">${m.leagueName}</span>
@@ -209,7 +163,7 @@ function renderLiveMatchesList(list) {
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div style="font-size: 0.85rem; font-weight: bold; flex:1;">
-                    ${m.home} <span style="color:#ef4444; margin:0 4px;">${m.scoreHome} - ${m.scoreAway}</span> ${m.away}
+                    ${m.home} <span style="color:var(--primary);">VS</span> ${m.away}
                 </div>
                 <button onclick="selectMatch('${escapeQuotes(m.home)}', '${escapeQuotes(m.away)}')" style="background:var(--card-bg); color:var(--primary); border:1px solid var(--primary); padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Analyser</button>
             </div>
@@ -264,7 +218,7 @@ window.filterMatches = function() {
     let filtered = realMatchesList;
 
     if (selectedLeague !== 'ALL') {
-        filtered = filtered.filter(m => m.leagueCode === selectedLeague);
+        filtered = filtered.filter(m => m.leagueName.toUpperCase().includes(selectedLeague));
     }
 
     if (searchInput !== '') {
@@ -468,4 +422,26 @@ window.clearHistory = function() {
 };
 
 function setupEventListeners() {
-    const btnGen = doc
+    const btnGen = document.getElementById('btn-generate');
+    if (btnGen) btnGen.onclick = handleGenerateAnalysis;
+
+    const btnRechargeAd = document.getElementById('btn-recharge-ad');
+    if (btnRechargeAd) {
+        btnRechargeAd.onclick = () => {
+            btnRechargeAd.disabled = true;
+
+            let timer = 5;
+            const interval = setInterval(() => {
+                btnRechargeAd.innerText = `⏳ Pub en cours (${timer}s)...`;
+                timer--;
+                if (timer < 0) {
+                    clearInterval(interval);
+                    updateCredits(getCredits() + 5);
+                    btnRechargeAd.innerText = `🎬 Regarder une pub (+5 Jetons)`;
+                    btnRechargeAd.disabled = false;
+                    alert("🎉 FÉLICITATIONS ! +5 Jetons ont été crédités à votre compte.");
+                }
+            }, 1000);
+        };
+    }
+}
