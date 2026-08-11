@@ -1,15 +1,17 @@
+const FOOTBALL_DATA_KEY = "88a99558649e4852a930945114486f17";
+const API_BASE_URL = "https://api.football-data.org/v4";
+
 const EXTENDED_LEAGUES = [
     { value: "ALL", name: "🌐 Toutes" },
-    { value: "French Ligue 1", name: "⚽ Ligue 1" },
-    { value: "English Premier League", name: "🇬🇧 Premier League" },
-    { value: "Spanish La Liga", name: "🇪🇸 La Liga" },
-    { value: "Italian Serie A", name: "🇮🇹 Serie A" },
-    { value: "German Bundesliga", name: "🇩🇪 Bundesliga" },
-    { value: "UEFA Champions League", name: "🏆 Champions League" }
+    { value: "FL1", name: "⚽ Ligue 1" },
+    { value: "PL", name: "🇬🇧 Premier League" },
+    { value: "PD", name: "🇪🇸 La Liga" },
+    { value: "SA", name: "🇮🇹 Serie A" },
+    { value: "BL1", name: "🇩🇪 Bundesliga" },
+    { value: "CL", name: "🏆 Champions League" }
 ];
 
 let realMatchesList = [];
-let liveMatchesList = [];
 let couponList = [];
 let currentFilterLeague = "ALL";
 
@@ -25,7 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     loadTodayMatches();
-    loadLiveMatches();
 });
 
 function getTodayFormattedDate() {
@@ -45,88 +46,72 @@ async function loadTodayMatches() {
     }
 
     const dateStr = getTodayFormattedDate();
-    const apiUrl = `https://www.thesportsdb.com/api/v1/json/3/eventsday.php?s=Soccer&d=${dateStr}`;
+    const url = `${API_BASE_URL}/matches?dateFrom=${dateStr}&dateTo=${dateStr}`;
 
     try {
-        const response = await fetch(apiUrl);
-        if (!response.ok) throw new Error("Erreur réseau HTTP " + response.status);
+        const response = await fetch(url, {
+            headers: { 'X-Auth-Token': FOOTBALL_DATA_KEY }
+        });
+
+        if (!response.ok) throw new Error("Erreur serveur HTTP " + response.status);
 
         const data = await response.json();
 
-        if (data && data.events && data.events.length > 0) {
-            realMatchesList = data.events.map(e => ({
-                id: e.idEvent,
-                home: e.strHomeTeam,
-                away: e.strAwayTeam,
-                league: e.strLeague || "",
-                leagueName: e.strLeague ? `⚽ ${e.strLeague}` : "⚽ Football",
-                time: e.strTime ? e.strTime.substring(0, 5) : "",
-                status: e.strStatus || ""
-            }));
+        if (data && data.matches && data.matches.length > 0) {
+            realMatchesList = data.matches.map(m => {
+                const matchTime = m.utcDate ? new Date(m.utcDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "";
+                return {
+                    id: m.id,
+                    home: m.homeTeam.name,
+                    away: m.awayTeam.name,
+                    leagueCode: m.competition.code || "ALL",
+                    leagueName: `⚽ ${m.competition.name}`,
+                    time: matchTime,
+                    status: m.status,
+                    scoreHome: m.score.fullTime.home !== null ? m.score.fullTime.home : (m.score.halfTime.home !== null ? m.score.halfTime.home : 0),
+                    scoreAway: m.score.fullTime.away !== null ? m.score.fullTime.away : (m.score.halfTime.away !== null ? m.score.halfTime.away : 0)
+                };
+            });
 
             renderMatchesList(realMatchesList);
             renderVIPMatches(realMatchesList);
+            renderLiveMatchesList(realMatchesList);
         } else {
             realMatchesList = [];
-            if (container) {
-                container.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Aucun match disponible pour cette date.</div>`;
-            }
-            if (vipContainer) {
-                vipContainer.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Aucun match disponible pour cette date.</div>`;
-            }
+            showEmptyState("Aucun match disponible pour cette date.");
         }
     } catch (err) {
         realMatchesList = [];
-        const errorHtml = `
-            <div style="text-align:center; padding:15px; color:#ef4444;">
-                <div>⚠️ Erreur de connexion au serveur d'API.</div>
-                <button class="btn-retry" onclick="loadTodayMatches()">🔄 Réessayer</button>
-            </div>
-        `;
-        if (container) container.innerHTML = errorHtml;
-        if (vipContainer) vipContainer.innerHTML = errorHtml;
+        showErrorState();
     }
 }
 
-async function loadLiveMatches() {
+function showEmptyState(msg) {
+    const container = document.getElementById('matches-container');
+    const vipContainer = document.getElementById('vip-matches-list');
     const liveContainer = document.getElementById('live-matches-container');
-    if (!liveContainer) return;
 
-    liveContainer.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">⏳ Recherche des matchs en direct...</div>`;
+    const html = `<div style="text-align:center; padding:15px; color:var(--text-muted);">${msg}</div>`;
+    if (container) container.innerHTML = html;
+    if (vipContainer) vipContainer.innerHTML = html;
+    if (liveContainer) liveContainer.innerHTML = html;
+}
 
-    const liveApiUrl = `https://www.thesportsdb.com/api/v1/json/3/eventslivesoccer.php`;
+function showErrorState() {
+    const container = document.getElementById('matches-container');
+    const vipContainer = document.getElementById('vip-matches-list');
+    const liveContainer = document.getElementById('live-matches-container');
 
-    try {
-        const response = await fetch(liveApiUrl);
-        if (!response.ok) throw new Error("Erreur réseau HTTP " + response.status);
+    const errorHtml = `
+        <div style="text-align:center; padding:15px; color:#ef4444;">
+            <div>⚠️ Erreur de connexion au serveur d'API.</div>
+            <button class="btn-retry" onclick="loadTodayMatches()">🔄 Réessayer</button>
+        </div>
+    `;
 
-        const data = await response.json();
-
-        if (data && data.events && data.events.length > 0) {
-            liveMatchesList = data.events.map(e => ({
-                id: e.idEvent,
-                home: e.strHomeTeam,
-                away: e.strAwayTeam,
-                leagueName: e.strLeague ? `⚽ ${e.strLeague}` : "🔴 En Direct",
-                scoreHome: e.intHomeScore !== null && e.intHomeScore !== undefined ? e.intHomeScore : "-",
-                scoreAway: e.intAwayScore !== null && e.intAwayScore !== undefined ? e.intAwayScore : "-",
-                progress: e.strProgress || "En cours"
-            }));
-
-            renderLiveMatchesList(liveMatchesList);
-        } else {
-            liveMatchesList = [];
-            liveContainer.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Aucun match disponible pour cette date.</div>`;
-        }
-    } catch (err) {
-        liveMatchesList = [];
-        liveContainer.innerHTML = `
-            <div style="text-align:center; padding:15px; color:#ef4444;">
-                <div>⚠️ Impossible de charger les matchs en direct.</div>
-                <button class="btn-retry" onclick="loadLiveMatches()">🔄 Réessayer</button>
-            </div>
-        `;
-    }
+    if (container) container.innerHTML = errorHtml;
+    if (vipContainer) vipContainer.innerHTML = errorHtml;
+    if (liveContainer) liveContainer.innerHTML = errorHtml;
 }
 
 function renderMatchesList(list) {
@@ -178,16 +163,19 @@ function renderLiveMatchesList(list) {
     const liveContainer = document.getElementById('live-matches-container');
     if (!liveContainer) return;
 
-    if (!list || list.length === 0) {
+    const liveStatuses = ["IN_PLAY", "PAUSED", "LIVE"];
+    const liveList = list.filter(m => liveStatuses.includes(m.status));
+
+    if (!liveList || liveList.length === 0) {
         liveContainer.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Aucun match disponible pour cette date.</div>`;
         return;
     }
 
-    liveContainer.innerHTML = list.map(m => `
+    liveContainer.innerHTML = liveList.map(m => `
         <div style="background: var(--inner-bg); margin: 8px 0; padding: 12px; border-radius: 6px; border: 1px solid #ef4444;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                 <span style="font-size:0.75rem; color:var(--text-muted);">${m.leagueName}</span>
-                <span style="background:#ef4444; color:white; font-size:0.65rem; font-weight:bold; padding:2px 6px; border-radius:10px;">🔴 ${m.progress}</span>
+                <span style="background:#ef4444; color:white; font-size:0.65rem; font-weight:bold; padding:2px 6px; border-radius:10px;">🔴 En Direct</span>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div style="font-size: 0.85rem; font-weight: bold; flex:1;">
@@ -246,7 +234,7 @@ window.filterMatches = function() {
     let filtered = realMatchesList;
 
     if (selectedLeague !== 'ALL') {
-        filtered = filtered.filter(m => m.league.toLowerCase().includes(selectedLeague.toLowerCase()));
+        filtered = filtered.filter(m => m.leagueCode === selectedLeague);
     }
 
     if (searchInput !== '') {
@@ -326,7 +314,6 @@ window.switchTab = function(tabName) {
     if (targetSection) targetSection.classList.add('active');
     if (targetTab) targetTab.classList.add('active');
 
-    if (tabName === 'direct') loadLiveMatches();
     if (tabName === 'compte') loadHistoryUI();
 };
 
@@ -468,4 +455,9 @@ function setupEventListeners() {
                     updateCredits(getCredits() + 5);
                     btnRechargeAd.innerText = `🎬 Regarder une pub (+5 Jetons)`;
                     btnRechargeAd.disabled = false;
-                    a
+                    alert("🎉 FÉLICITATIONS ! +5 Jetons ont été crédités à votre compte.");
+                }
+            }, 1000);
+        };
+    }
+}
