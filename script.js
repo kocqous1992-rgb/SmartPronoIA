@@ -75,7 +75,8 @@ window.selectLeaguePill = function(leagueValue) {
 };
 
 window.filterMatches = function() {
-    const selectedLeague = document.getElementById('league-select').value;
+    const select = document.getElementById('league-select');
+    const selectedLeague = select ? select.value : 'ALL';
     currentFilterLeague = selectedLeague;
     renderLeaguePills();
 
@@ -99,9 +100,10 @@ window.filterMatches = function() {
 
 function renderMatchesList(list) {
     const container = document.getElementById('matches-container');
+    if (!container) return;
 
     if (!list || list.length === 0) {
-        if (container) container.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Aucun match trouvé.</div>`;
+        container.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Aucun match trouvé.</div>`;
         return;
     }
 
@@ -118,7 +120,7 @@ function renderMatchesList(list) {
         </div>
     `).join('');
 
-    if (container) container.innerHTML = html;
+    container.innerHTML = html;
 }
 
 function renderLiveMatchesList() {
@@ -227,8 +229,10 @@ function getCredits() {
 
 function syncCreditsUI() {
     const credits = getCredits();
-    document.getElementById('credits-count').innerText = credits;
-    document.getElementById('account-credits').innerText = credits;
+    const countEl = document.getElementById('credits-count');
+    const accountEl = document.getElementById('account-credits');
+    if (countEl) countEl.innerText = credits;
+    if (accountEl) accountEl.innerText = credits;
 }
 
 function updateCredits(count) {
@@ -237,8 +241,10 @@ function updateCredits(count) {
 }
 
 function handleGenerateAnalysis() {
-    const home = document.getElementById('home-team').value.trim();
-    const away = document.getElementById('away-team').value.trim();
+    const homeInput = document.getElementById('home-team');
+    const awayInput = document.getElementById('away-team');
+    const home = homeInput ? homeInput.value.trim() : '';
+    const away = awayInput ? awayInput.value.trim() : '';
 
     if (!home || !away) {
         alert("Entrez deux équipes !");
@@ -319,16 +325,21 @@ function handleGenerateAnalysis() {
         </div>
     `;
 
-    document.getElementById('card-selection').after(card);
-    card.scrollIntoView({ behavior: 'smooth' });
+    const cardSelection = document.getElementById('card-selection');
+    if (cardSelection) {
+        cardSelection.after(card);
+        card.scrollIntoView({ behavior: 'smooth' });
+    }
 }
 
 window.copyToClipboard = function(text) {
-    navigator.clipboard.writeText(text).then(() => {
-        alert("📋 Pronostic copié dans le presse-papier !");
-    }).catch(() => {
-        alert("Impossible de copier automatiquement.");
-    });
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+            alert("📋 Pronostic copié dans le presse-papier !");
+        }).catch(() => alert("Copié !"));
+    } else {
+        alert("📋 Résumé :\n\n" + text);
+    }
 };
 
 function saveAnalysisToHistory(item) {
@@ -363,32 +374,26 @@ window.clearHistory = function() {
 };
 
 function setupEventListeners() {
-    document.getElementById('btn-generate')?.addEventListener('click', handleGenerateAnalysis);
+    const btnGen = document.getElementById('btn-generate');
+    if (btnGen) btnGen.onclick = handleGenerateAnalysis;
 
     const btnRechargeAd = document.getElementById('btn-recharge-ad');
     if (btnRechargeAd) {
         btnRechargeAd.onclick = () => {
             btnRechargeAd.disabled = true;
 
-            if (typeof show_8854321 === 'function') {
-                show_8854321().then(() => {
+            let timer = 5;
+            const interval = setInterval(() => {
+                btnRechargeAd.innerText = `⏳ Pub en cours (${timer}s)...`;
+                timer--;
+                if (timer < 0) {
+                    clearInterval(interval);
                     updateCredits(getCredits() + 5);
+                    btnRechargeAd.innerText = `🎬 Regarder une pub (+5 Jetons)`;
                     btnRechargeAd.disabled = false;
-                });
-            } else {
-                let timer = 5;
-                const interval = setInterval(() => {
-                    btnRechargeAd.innerText = `⏳ Pub en cours (${timer}s)...`;
-                    timer--;
-                    if (timer < 0) {
-                        clearInterval(interval);
-                        updateCredits(getCredits() + 5);
-                        btnRechargeAd.innerText = `🎬 Regarder une pub (+5 Jetons)`;
-                        btnRechargeAd.disabled = false;
-                        alert("🎉 FÉLICITATIONS ! +5 Jetons ont été crédités à votre compte.");
-                    }
-                }, 1000);
-            }
+                    alert("🎉 FÉLICITATIONS ! +5 Jetons ont été crédités à votre compte.");
+                }
+            }, 1000);
         };
     }
 }
