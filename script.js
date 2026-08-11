@@ -1,5 +1,4 @@
 const FOOTBALL_DATA_KEY = "88a99558649e4852a930945114486f17";
-const API_BASE_URL = "https://api.football-data.org/v4";
 
 const EXTENDED_LEAGUES = [
     { value: "ALL", name: "🌐 Toutes" },
@@ -37,25 +36,30 @@ function getTodayFormattedDate() {
     return `${year}-${month}-${day}`;
 }
 
+async function fetchWithCorsProxy(targetUrl, headers = {}) {
+    // Contournement du blocage CORS via proxy
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+    const response = await fetch(proxyUrl, { headers });
+    if (!response.ok) throw new Error("Erreur HTTP " + response.status);
+    return await response.json();
+}
+
 async function loadTodayMatches() {
     const container = document.getElementById('matches-container');
     const vipContainer = document.getElementById('vip-matches-list');
-    
+    const liveContainer = document.getElementById('live-matches-container');
+
     if (container) {
         container.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">⏳ Chargement des matchs réels...</div>`;
     }
 
     const dateStr = getTodayFormattedDate();
-    const url = `${API_BASE_URL}/matches?dateFrom=${dateStr}&dateTo=${dateStr}`;
+    const targetApiUrl = `https://api.football-data.org/v4/matches?dateFrom=${dateStr}&dateTo=${dateStr}`;
 
     try {
-        const response = await fetch(url, {
-            headers: { 'X-Auth-Token': FOOTBALL_DATA_KEY }
+        const data = await fetchWithCorsProxy(targetApiUrl, {
+            'X-Auth-Token': FOOTBALL_DATA_KEY
         });
-
-        if (!response.ok) throw new Error("Erreur serveur HTTP " + response.status);
-
-        const data = await response.json();
 
         if (data && data.matches && data.matches.length > 0) {
             realMatchesList = data.matches.map(m => {
@@ -64,12 +68,12 @@ async function loadTodayMatches() {
                     id: m.id,
                     home: m.homeTeam.name,
                     away: m.awayTeam.name,
-                    leagueCode: m.competition.code || "ALL",
-                    leagueName: `⚽ ${m.competition.name}`,
+                    leagueCode: m.competition ? m.competition.code : "ALL",
+                    leagueName: m.competition ? `⚽ ${m.competition.name}` : "⚽ Football",
                     time: matchTime,
                     status: m.status,
-                    scoreHome: m.score.fullTime.home !== null ? m.score.fullTime.home : (m.score.halfTime.home !== null ? m.score.halfTime.home : 0),
-                    scoreAway: m.score.fullTime.away !== null ? m.score.fullTime.away : (m.score.halfTime.away !== null ? m.score.halfTime.away : 0)
+                    scoreHome: m.score && m.score.fullTime && m.score.fullTime.home !== null ? m.score.fullTime.home : 0,
+                    scoreAway: m.score && m.score.fullTime && m.score.fullTime.away !== null ? m.score.fullTime.away : 0
                 };
             });
 
@@ -81,8 +85,34 @@ async function loadTodayMatches() {
             showEmptyState("Aucun match disponible pour cette date.");
         }
     } catch (err) {
-        realMatchesList = [];
-        showErrorState();
+        // Tentative de secours automatique via TheSportsDB
+        try {
+            const fallbackUrl = `https://www.thesportsdb.com/api/v1/json/3/eventsday.php?s=Soccer&d=${dateStr}`;
+            const fallbackData = await fetchWithCorsProxy(fallbackUrl);
+
+            if (fallbackData && fallbackData.events && fallbackData.events.length > 0) {
+                realMatchesList = fallbackData.events.map(e => ({
+                    id: e.idEvent,
+                    home: e.strHomeTeam,
+                    away: e.strAwayTeam,
+                    leagueCode: "ALL",
+                    leagueName: e.strLeague ? `⚽ ${e.strLeague}` : "⚽ Football",
+                    time: e.strTime ? e.strTime.substring(0, 5) : "",
+                    status: e.strStatus || "",
+                    scoreHome: 0,
+                    scoreAway: 0
+                }));
+
+                renderMatchesList(realMatchesList);
+                renderVIPMatches(realMatchesList);
+                renderLiveMatchesList(realMatchesList);
+            } else {
+                showEmptyState("Aucun match disponible pour cette date.");
+            }
+        } catch (fallbackErr) {
+            realMatchesList = [];
+            showErrorState();
+        }
     }
 }
 
@@ -163,7 +193,7 @@ function renderLiveMatchesList(list) {
     const liveContainer = document.getElementById('live-matches-container');
     if (!liveContainer) return;
 
-    const liveStatuses = ["IN_PLAY", "PAUSED", "LIVE"];
+    const liveStatuses = ["IN_PLAY", "PAUSED", "LIVE", "1H", "2H", "HT"];
     const liveList = list.filter(m => liveStatuses.includes(m.status));
 
     if (!liveList || liveList.length === 0) {
@@ -438,26 +468,4 @@ window.clearHistory = function() {
 };
 
 function setupEventListeners() {
-    const btnGen = document.getElementById('btn-generate');
-    if (btnGen) btnGen.onclick = handleGenerateAnalysis;
-
-    const btnRechargeAd = document.getElementById('btn-recharge-ad');
-    if (btnRechargeAd) {
-        btnRechargeAd.onclick = () => {
-            btnRechargeAd.disabled = true;
-
-            let timer = 5;
-            const interval = setInterval(() => {
-                btnRechargeAd.innerText = `⏳ Pub en cours (${timer}s)...`;
-                timer--;
-                if (timer < 0) {
-                    clearInterval(interval);
-                    updateCredits(getCredits() + 5);
-                    btnRechargeAd.innerText = `🎬 Regarder une pub (+5 Jetons)`;
-                    btnRechargeAd.disabled = false;
-                    alert("🎉 FÉLICITATIONS ! +5 Jetons ont été crédités à votre compte.");
-                }
-            }, 1000);
-        };
-    }
-}
+    const btnGen = doc
