@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmartPronoIA - Analyses & Pronostics Football par IA</title>
     
-    <!-- BALISES SEO & OPEN GRAPH (ÉTAPE 3) -->
     <meta name="description" content="Obtenez des analyses de matchs de football précises, des coupons combinés et des conseils VIP propulsés par intelligence artificielle.">
     <meta property="og:title" content="SmartPronoIA - Pronostics Football IA">
     <meta property="og:description" content="Prédisez les résultats des matchs, créez vos coupons combinés et accédez aux pronos VIP 95% confiance.">
@@ -15,8 +14,7 @@
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#0f172a">
 
-    <!-- 💡 ÉTAPE 1 : EMPLACEMENT OFFICIEL SCRIPT PUBLICITAIRE MONETAG -->
-    <!-- Remplacez "YOUR_ZONE_ID" par votre ID de zone fourni par Monetag -->
+    <!-- 💡 EMPLACEMENT SCRIPT PUBLICITAIRE MONETAG -->
     <!-- <script src="//thubanoa.com/1?z=YOUR_ZONE_ID" async data-cfasync="false"></script> -->
 
     <style>
@@ -123,6 +121,11 @@
             font-size: 0.9rem;
         }
 
+        .btn-retry {
+            background: var(--primary); color: #000; border: none; padding: 8px 16px;
+            border-radius: 6px; font-weight: bold; font-size: 0.85rem; cursor: pointer; margin-top: 10px;
+        }
+
         .btn-telegram {
             display: block; width: 100%; background: #0088cc; color: white; text-align: center;
             padding: 12px; border-radius: 8px; font-weight: bold; text-decoration: none;
@@ -193,7 +196,7 @@
             </div>
             
             <div id="matches-container">
-                <div style="text-align:center; padding:15px; color:#94a3b8;">⏳ Chargement...</div>
+                <div style="text-align:center; padding:15px; color:#94a3b8;">⏳ Chargement des matchs réels...</div>
             </div>
         </div>
     </div>
@@ -202,24 +205,11 @@
     <div id="section-vip" class="page-section">
         <div class="card" style="border: 2px solid #eab308; background: linear-gradient(135deg, var(--card-bg) 0%, var(--inner-bg) 100%);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h3 style="margin:0; color:#eab308;">🔥 Pronostics VIP (95% Confiance)</h3>
+                <h3 style="margin:0; color:#eab308;">🔥 Pronostics VIP (Réels API)</h3>
                 <span style="background:#eab308; color:#000; font-size:0.7rem; font-weight:bold; padding:2px 8px; border-radius:10px;">PRO</span>
             </div>
             <div id="vip-matches-list">
-                <div style="background: var(--inner-bg); padding: 10px; border-radius: 6px; margin-top: 8px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <div style="font-size: 0.85rem; font-weight: bold;">Paris SG VS Marseille</div>
-                        <div style="font-size: 0.75rem; color: var(--accent); font-weight: bold; margin-top: 2px;">💡 Conseil : Victoire Paris SG</div>
-                    </div>
-                    <button onclick="selectMatch('Paris SG', 'Marseille')" style="background:#eab308; color:#000; font-weight:bold; border:none; border-radius:4px; padding:6px 10px; font-size:0.75rem; cursor:pointer;">Choisir</button>
-                </div>
-                <div style="background: var(--inner-bg); padding: 10px; border-radius: 6px; margin-top: 8px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <div style="font-size: 0.85rem; font-weight: bold;">Real Madrid VS FC Barcelona</div>
-                        <div style="font-size: 0.75rem; color: var(--accent); font-weight: bold; margin-top: 2px;">💡 Conseil : Plus de 2.5 Buts</div>
-                    </div>
-                    <button onclick="selectMatch('Real Madrid', 'FC Barcelona')" style="background:#eab308; color:#000; font-weight:bold; border:none; border-radius:4px; padding:6px 10px; font-size:0.75rem; cursor:pointer;">Choisir</button>
-                </div>
+                <div style="text-align:center; padding:15px; color:#94a3b8;">⏳ Chargement de la sélection VIP...</div>
             </div>
         </div>
     </div>
@@ -229,7 +219,7 @@
         <div class="card">
             <h3>🔴 Matchs en Direct</h3>
             <div id="live-matches-container">
-                <div style="text-align:center; padding:15px; color:#94a3b8;">⚡ Recherche...</div>
+                <div style="text-align:center; padding:15px; color:#94a3b8;">⏳ Recherche des matchs en direct...</div>
             </div>
         </div>
     </div>
@@ -241,7 +231,6 @@
             <p style="font-size: 0.9rem;">Solde actuel : <strong id="account-credits">10</strong> Jetons</p>
         </div>
 
-        <!-- 📢 ÉTAPE 2 : CANAL TELEGRAM DE LA COMMUNAUTÉ -->
         <div class="card">
             <h3>📢 Communauté VIP</h3>
             <p style="font-size:0.8rem; color:var(--text-muted);">Rejoignez notre canal officiel pour recevoir des coupons exclusifs tous les jours.</p>

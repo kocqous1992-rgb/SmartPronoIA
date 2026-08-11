@@ -1,38 +1,21 @@
 const EXTENDED_LEAGUES = [
     { value: "ALL", name: "🌐 Toutes" },
-    { value: "Ligue 1", name: "⚽ Ligue 1" },
-    { value: "Premier League", name: "🇬🇧 Premier League" },
-    { value: "La Liga", name: "🇪🇸 La Liga" },
-    { value: "Serie A", name: "🇮🇹 Serie A" },
-    { value: "Bundesliga", name: "🇩🇪 Bundesliga" },
-    { value: "UEFA Champions League", name: "🏆 Champions League" },
-    { value: "CAF Champions League", name: "🌍 CAF" },
-    { value: "Saudi Pro League", name: "🇸🇦 Saudi League" }
+    { value: "French Ligue 1", name: "⚽ Ligue 1" },
+    { value: "English Premier League", name: "🇬🇧 Premier League" },
+    { value: "Spanish La Liga", name: "🇪🇸 La Liga" },
+    { value: "Italian Serie A", name: "🇮🇹 Serie A" },
+    { value: "German Bundesliga", name: "🇩🇪 Bundesliga" },
+    { value: "UEFA Champions League", name: "🏆 Champions League" }
 ];
 
-const MATCHES_DATA = [
-    { home: "Paris SG", away: "Marseille", league: "Ligue 1", leagueName: "⚽ Ligue 1 (France)", live: true, scoreHome: 2, scoreAway: 1, minute: "64'" },
-    { home: "Real Madrid", away: "FC Barcelona", league: "La Liga", leagueName: "🇪🇸 La Liga (Espagne)", live: true, scoreHome: 1, scoreAway: 1, minute: "38'" },
-    { home: "Arsenal", away: "Manchester City", league: "Premier League", leagueName: "🇬🇧 Premier League (Angleterre)", live: true, scoreHome: 0, scoreAway: 0, minute: "12'" },
-    { home: "Lyon", away: "Monaco", league: "Ligue 1", leagueName: "⚽ Ligue 1 (France)", live: false },
-    { home: "Atletico Madrid", away: "Sevilla", league: "La Liga", leagueName: "🇪🇸 La Liga (Espagne)", live: false },
-    { home: "Liverpool", away: "Chelsea", league: "Premier League", leagueName: "🇬🇧 Premier League (Angleterre)", live: false },
-    { home: "Bayern München", away: "Dortmund", league: "Bundesliga", leagueName: "🇩🇪 Bundesliga (Allemagne)", live: false },
-    { home: "Inter", away: "AC Milan", league: "Serie A", leagueName: "🇮🇹 Serie A (Italie)", live: false },
-    { home: "Juventus", away: "Napoli", league: "Serie A", leagueName: "🇮🇹 Serie A (Italie)", live: false },
-    { home: "Al Ahly", away: "Zamalek", league: "CAF Champions League", leagueName: "🌍 Ligue des Champions CAF", live: false },
-    { home: "Wydad Casablanca", away: "Raja Casablanca", league: "CAF Champions League", leagueName: "🌍 Ligue des Champions CAF", live: false },
-    { home: "Al Hilal", away: "Al Nassr", league: "Saudi Pro League", leagueName: "🇸🇦 Saudi Pro League", live: false }
-];
-
+let realMatchesList = [];
+let liveMatchesList = [];
 let couponList = [];
 let currentFilterLeague = "ALL";
 
 document.addEventListener('DOMContentLoaded', () => {
     populateLeagueSelect();
     renderLeaguePills();
-    renderMatchesList(MATCHES_DATA);
-    renderLiveMatchesList();
     syncCreditsUI();
     setupEventListeners();
     loadHistoryUI();
@@ -40,7 +23,185 @@ document.addEventListener('DOMContentLoaded', () => {
     if (localStorage.getItem('smartprono_theme') === 'light') {
         document.body.classList.add('light-mode');
     }
+
+    loadTodayMatches();
+    loadLiveMatches();
 });
+
+function getTodayFormattedDate() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+async function loadTodayMatches() {
+    const container = document.getElementById('matches-container');
+    const vipContainer = document.getElementById('vip-matches-list');
+    
+    if (container) {
+        container.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">⏳ Chargement des matchs réels...</div>`;
+    }
+
+    const dateStr = getTodayFormattedDate();
+    const apiUrl = `https://www.thesportsdb.com/api/v1/json/3/eventsday.php?s=Soccer&d=${dateStr}`;
+
+    try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) throw new Error("Erreur réseau HTTP " + response.status);
+
+        const data = await response.json();
+
+        if (data && data.events && data.events.length > 0) {
+            realMatchesList = data.events.map(e => ({
+                id: e.idEvent,
+                home: e.strHomeTeam,
+                away: e.strAwayTeam,
+                league: e.strLeague || "",
+                leagueName: e.strLeague ? `⚽ ${e.strLeague}` : "⚽ Football",
+                time: e.strTime ? e.strTime.substring(0, 5) : "",
+                status: e.strStatus || ""
+            }));
+
+            renderMatchesList(realMatchesList);
+            renderVIPMatches(realMatchesList);
+        } else {
+            realMatchesList = [];
+            if (container) {
+                container.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Aucun match disponible pour cette date.</div>`;
+            }
+            if (vipContainer) {
+                vipContainer.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Aucun match disponible pour cette date.</div>`;
+            }
+        }
+    } catch (err) {
+        realMatchesList = [];
+        const errorHtml = `
+            <div style="text-align:center; padding:15px; color:#ef4444;">
+                <div>⚠️ Erreur de connexion au serveur d'API.</div>
+                <button class="btn-retry" onclick="loadTodayMatches()">🔄 Réessayer</button>
+            </div>
+        `;
+        if (container) container.innerHTML = errorHtml;
+        if (vipContainer) vipContainer.innerHTML = errorHtml;
+    }
+}
+
+async function loadLiveMatches() {
+    const liveContainer = document.getElementById('live-matches-container');
+    if (!liveContainer) return;
+
+    liveContainer.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">⏳ Recherche des matchs en direct...</div>`;
+
+    const liveApiUrl = `https://www.thesportsdb.com/api/v1/json/3/eventslivesoccer.php`;
+
+    try {
+        const response = await fetch(liveApiUrl);
+        if (!response.ok) throw new Error("Erreur réseau HTTP " + response.status);
+
+        const data = await response.json();
+
+        if (data && data.events && data.events.length > 0) {
+            liveMatchesList = data.events.map(e => ({
+                id: e.idEvent,
+                home: e.strHomeTeam,
+                away: e.strAwayTeam,
+                leagueName: e.strLeague ? `⚽ ${e.strLeague}` : "🔴 En Direct",
+                scoreHome: e.intHomeScore !== null && e.intHomeScore !== undefined ? e.intHomeScore : "-",
+                scoreAway: e.intAwayScore !== null && e.intAwayScore !== undefined ? e.intAwayScore : "-",
+                progress: e.strProgress || "En cours"
+            }));
+
+            renderLiveMatchesList(liveMatchesList);
+        } else {
+            liveMatchesList = [];
+            liveContainer.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Aucun match disponible pour cette date.</div>`;
+        }
+    } catch (err) {
+        liveMatchesList = [];
+        liveContainer.innerHTML = `
+            <div style="text-align:center; padding:15px; color:#ef4444;">
+                <div>⚠️ Impossible de charger les matchs en direct.</div>
+                <button class="btn-retry" onclick="loadLiveMatches()">🔄 Réessayer</button>
+            </div>
+        `;
+    }
+}
+
+function renderMatchesList(list) {
+    const container = document.getElementById('matches-container');
+    if (!container) return;
+
+    if (!list || list.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Aucun match disponible pour cette date.</div>`;
+        return;
+    }
+
+    container.innerHTML = list.map(m => `
+        <div style="background: var(--inner-bg); margin: 8px 0; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+            <div style="flex:1; cursor:pointer;" onclick="selectMatch('${escapeQuotes(m.home)}', '${escapeQuotes(m.away)}')">
+                <div style="font-size: 0.75rem; color: var(--text-muted);">${m.leagueName} ${m.time ? '• ' + m.time : ''}</div>
+                <div style="font-size: 0.85rem; font-weight: 600;">${m.home} <span style="color: var(--primary);">VS</span> ${m.away}</div>
+            </div>
+            <div style="display:flex; gap:5px;">
+                <button onclick="selectMatch('${escapeQuotes(m.home)}', '${escapeQuotes(m.away)}')" style="background:var(--card-bg); color:var(--primary); border:1px solid var(--primary); padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Choisir</button>
+                <button onclick="addToCoupon('${escapeQuotes(m.home)}', '${escapeQuotes(m.away)}')" style="background:#eab308; color:#000; border:none; padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">+ Ticket</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderVIPMatches(list) {
+    const vipContainer = document.getElementById('vip-matches-list');
+    if (!vipContainer) return;
+
+    if (!list || list.length === 0) {
+        vipContainer.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Aucun match disponible pour cette date.</div>`;
+        return;
+    }
+
+    const vipSelection = list.slice(0, 3);
+
+    vipContainer.innerHTML = vipSelection.map(m => `
+        <div style="background: var(--inner-bg); padding: 10px; border-radius: 6px; margin-top: 8px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">${m.leagueName}</div>
+                <div style="font-size: 0.85rem; font-weight: bold;">${m.home} VS ${m.away}</div>
+            </div>
+            <button onclick="selectMatch('${escapeQuotes(m.home)}', '${escapeQuotes(m.away)}')" style="background:#eab308; color:#000; font-weight:bold; border:none; border-radius:4px; padding:6px 10px; font-size:0.75rem; cursor:pointer;">Choisir</button>
+        </div>
+    `).join('');
+}
+
+function renderLiveMatchesList(list) {
+    const liveContainer = document.getElementById('live-matches-container');
+    if (!liveContainer) return;
+
+    if (!list || list.length === 0) {
+        liveContainer.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Aucun match disponible pour cette date.</div>`;
+        return;
+    }
+
+    liveContainer.innerHTML = list.map(m => `
+        <div style="background: var(--inner-bg); margin: 8px 0; padding: 12px; border-radius: 6px; border: 1px solid #ef4444;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <span style="font-size:0.75rem; color:var(--text-muted);">${m.leagueName}</span>
+                <span style="background:#ef4444; color:white; font-size:0.65rem; font-weight:bold; padding:2px 6px; border-radius:10px;">🔴 ${m.progress}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-size: 0.85rem; font-weight: bold; flex:1;">
+                    ${m.home} <span style="color:#ef4444; margin:0 4px;">${m.scoreHome} - ${m.scoreAway}</span> ${m.away}
+                </div>
+                <button onclick="selectMatch('${escapeQuotes(m.home)}', '${escapeQuotes(m.away)}')" style="background:var(--card-bg); color:var(--primary); border:1px solid var(--primary); padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Analyser</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function escapeQuotes(str) {
+    return (str || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
+}
 
 window.toggleTheme = function() {
     document.body.classList.toggle('light-mode');
@@ -82,10 +243,10 @@ window.filterMatches = function() {
 
     const searchInput = document.getElementById('search-input')?.value.toLowerCase().trim() || '';
 
-    let filtered = MATCHES_DATA;
+    let filtered = realMatchesList;
 
     if (selectedLeague !== 'ALL') {
-        filtered = filtered.filter(m => m.league === selectedLeague);
+        filtered = filtered.filter(m => m.league.toLowerCase().includes(selectedLeague.toLowerCase()));
     }
 
     if (searchInput !== '') {
@@ -98,62 +259,11 @@ window.filterMatches = function() {
     renderMatchesList(filtered);
 };
 
-function renderMatchesList(list) {
-    const container = document.getElementById('matches-container');
-    if (!container) return;
-
-    if (!list || list.length === 0) {
-        container.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Aucun match trouvé.</div>`;
-        return;
-    }
-
-    const html = list.map(m => `
-        <div style="background: var(--inner-bg); margin: 8px 0; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
-            <div style="flex:1; cursor:pointer;" onclick="selectMatch('${m.home.replace(/'/g, "\\'")}', '${m.away.replace(/'/g, "\\'")}')">
-                <div style="font-size: 0.75rem; color: var(--text-muted);">${m.leagueName}</div>
-                <div style="font-size: 0.85rem; font-weight: 600;">${m.home} <span style="color: var(--primary);">VS</span> ${m.away}</div>
-            </div>
-            <div style="display:flex; gap:5px;">
-                <button onclick="selectMatch('${m.home.replace(/'/g, "\\'")}', '${m.away.replace(/'/g, "\\'")}')" style="background:var(--card-bg); color:var(--primary); border:1px solid var(--primary); padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Choisir</button>
-                <button onclick="addToCoupon('${m.home.replace(/'/g, "\\'")}', '${m.away.replace(/'/g, "\\'")}')" style="background:#eab308; color:#000; border:none; padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">+ Ticket</button>
-            </div>
-        </div>
-    `).join('');
-
-    container.innerHTML = html;
-}
-
-function renderLiveMatchesList() {
-    const liveContainer = document.getElementById('live-matches-container');
-    if (!liveContainer) return;
-
-    const liveSelection = MATCHES_DATA.filter(m => m.live);
-
-    liveContainer.innerHTML = liveSelection.map(m => `
-        <div style="background: var(--inner-bg); margin: 8px 0; padding: 12px; border-radius: 6px; border: 1px solid #ef4444;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <span style="font-size:0.75rem; color:var(--text-muted);">${m.leagueName}</span>
-                <span style="background:#ef4444; color:white; font-size:0.65rem; font-weight:bold; padding:2px 6px; border-radius:10px;">🔴 ${m.minute}</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div style="font-size: 0.85rem; font-weight: bold; flex:1;">
-                    ${m.home} <span style="color:#ef4444; margin:0 4px;">${m.scoreHome} - ${m.scoreAway}</span> ${m.away}
-                </div>
-                <button onclick="selectMatch('${m.home.replace(/'/g, "\\'")}', '${m.away.replace(/'/g, "\\'")}')" style="background:var(--card-bg); color:var(--primary); border:1px solid var(--primary); padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Analyser</button>
-            </div>
-        </div>
-    `).join('');
-}
-
 window.addToCoupon = function(home, away) {
     if (couponList.length >= 4) return alert("Maximum 4 matchs par coupon.");
     if (couponList.some(item => item.home === home && item.away === away)) return alert("Match déjà dans le ticket.");
 
-    const odds = (Math.random() * 0.4 + 1.35).toFixed(2);
-    const adviceOptions = [`Victoire ${home}`, 'Plus de 1.5 Buts', 'Les deux équipes marquant'];
-    const advice = adviceOptions[Math.floor(Math.random() * adviceOptions.length)];
-
-    couponList.push({ home, away, odds, advice });
+    couponList.push({ home, away });
     renderCouponUI();
 };
 
@@ -171,13 +281,10 @@ function renderCouponUI() {
         return;
     }
 
-    const totalOdds = couponList.reduce((acc, m) => acc * parseFloat(m.odds), 1).toFixed(2);
-
     let couponText = `🎟️ *COUPON COMBINÉ SMARTPRONOIA*\n`;
     couponList.forEach(m => {
-        couponText += `• ${m.home} vs ${m.away} -> ${m.advice} (Cote: ${m.odds})\n`;
+        couponText += `• ${m.home} vs ${m.away}\n`;
     });
-    couponText += `🔥 *Cote Totale : ${totalOdds}*`;
 
     const shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(couponText)}`;
 
@@ -185,13 +292,11 @@ function renderCouponUI() {
         <div class="card" style="border: 2px solid #eab308; background: var(--card-bg);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                 <h4 style="margin:0; color:#eab308;">🎟️ Coupon Combiné (${couponList.length}/4)</h4>
-                <span style="font-size:0.85rem;">Cote Totale : <strong style="color:var(--accent); font-size:1.1rem;">${totalOdds}</strong></span>
             </div>
             ${couponList.map((m, i) => `
                 <div style="background:var(--inner-bg); padding:8px; border-radius:6px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; border:1px solid var(--border-color);">
                     <div>
                         <div><strong>${m.home} VS ${m.away}</strong></div>
-                        <div style="color:var(--accent);">💡 ${m.advice} (Cote : ${m.odds})</div>
                     </div>
                     <button onclick="removeFromCoupon(${i})" style="background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; cursor:pointer;">❌</button>
                 </div>
@@ -204,8 +309,10 @@ function renderCouponUI() {
 }
 
 window.selectMatch = function(home, away) {
-    document.getElementById('home-team').value = home;
-    document.getElementById('away-team').value = away;
+    const homeInput = document.getElementById('home-team');
+    const awayInput = document.getElementById('away-team');
+    if (homeInput) homeInput.value = home;
+    if (awayInput) awayInput.value = away;
     switchTab('pronos');
 };
 
@@ -219,6 +326,7 @@ window.switchTab = function(tabName) {
     if (targetSection) targetSection.classList.add('active');
     if (targetTab) targetTab.classList.add('active');
 
+    if (tabName === 'direct') loadLiveMatches();
     if (tabName === 'compte') loadHistoryUI();
 };
 
@@ -259,19 +367,12 @@ function handleGenerateAnalysis() {
 
     updateCredits(credits - 1);
 
-    const winHome = Math.floor(Math.random() * 25) + 50;
-    const winAway = Math.floor(Math.random() * 20) + 15;
-    const draw = 100 - (winHome + winAway);
-    const confidence = Math.floor(Math.random() * 10) + 85;
-    const goalsPredict = (Math.random() * 1.2 + 1.8).toFixed(1);
-    const advice = winHome > 55 ? 'Victoire ' + home : 'Plus de 1.5 Buts';
-
-    saveAnalysisToHistory({ home, away, advice, confidence, date: new Date().toLocaleDateString('fr-FR') });
+    saveAnalysisToHistory({ home, away, date: new Date().toLocaleDateString('fr-FR') });
 
     const oldCard = document.getElementById('ai-result-card');
     if (oldCard) oldCard.remove();
 
-    const plainText = `⚽ SmartPronoIA\n${home} vs ${away}\n🎯 Conseil: ${advice}\n🔥 Confiance: ${confidence}%`;
+    const plainText = `⚽ SmartPronoIA\n${home} vs ${away}\nAnalyse générée avec succès.`;
     const shareText = encodeURIComponent(plainText);
 
     const card = document.createElement('div');
@@ -282,35 +383,12 @@ function handleGenerateAnalysis() {
     card.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <h4 style="margin:0; color:var(--primary); font-size:1rem;">🧠 Analyse SmartPronoIA</h4>
-            <span style="background:rgba(34, 197, 94, 0.2); color:var(--accent); border: 1px solid var(--accent); padding:3px 10px; border-radius:12px; font-size:0.75rem; font-weight:bold;">
-                Confiance : ${confidence}%
-            </span>
         </div>
 
         <div style="text-align:center; padding: 10px; background:var(--inner-bg); border-radius:8px; margin-bottom:12px; border:1px solid var(--border-color);">
             <div style="font-size:0.95rem; font-weight:bold;">
                 ${home} <span style="color:var(--primary);">VS</span> ${away}
             </div>
-        </div>
-
-        <div style="background:var(--inner-bg); padding:12px; border-radius:8px; margin-bottom:12px; border:1px solid var(--border-color);">
-            <div style="font-size:0.75rem; font-weight:bold; color:var(--text-muted); margin-bottom:8px;">📊 PROBABILITÉS DU MATCH</div>
-            <div style="display:flex; height:10px; border-radius:5px; overflow:hidden; background:var(--border-color); margin-bottom:10px;">
-                <div style="width:${winHome}%; background:var(--primary);"></div>
-                <div style="width:${draw}%; background:#eab308;"></div>
-                <div style="width:${winAway}%; background:#ef4444;"></div>
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:0.75rem;">
-                <div style="color:var(--primary);">🔵 ${home} : <strong>${winHome}%</strong></div>
-                <div style="color:#eab308;">🟡 Nul : <strong>${draw}%</strong></div>
-                <div style="color:#ef4444;">🔴 ${away} : <strong>${winAway}%</strong></div>
-            </div>
-        </div>
-
-        <div style="background:var(--inner-bg); padding:12px; border-radius:8px; border-left: 4px solid var(--accent); margin-bottom:12px;">
-            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:bold;">🎯 CONSEIL SÉLECTIONNÉ</div>
-            <div style="color:var(--accent); font-size:1rem; font-weight:bold; margin-top:4px;">${advice}</div>
-            <div style="color:var(--text-color); font-size:0.75rem; margin-top:4px;">Moyenne buts : <strong style="color:var(--primary);">${goalsPredict}</strong></div>
         </div>
 
         <div style="display:flex; gap:8px;">
@@ -362,7 +440,6 @@ function loadHistoryUI() {
     container.innerHTML = history.map(h => `
         <div style="background:var(--inner-bg); border:1px solid var(--border-color); padding:8px 10px; border-radius:6px; margin-bottom:6px;">
             <div style="font-weight:bold; font-size:0.85rem; color:var(--primary);">${h.home} VS ${h.away}</div>
-            <div style="font-size:0.8rem; color:var(--accent);">💡 ${h.advice} (${h.confidence}% Confiance)</div>
             <div style="font-size:0.7rem; color:var(--text-muted);">Généré le ${h.date}</div>
         </div>
     `).join('');
@@ -391,9 +468,4 @@ function setupEventListeners() {
                     updateCredits(getCredits() + 5);
                     btnRechargeAd.innerText = `🎬 Regarder une pub (+5 Jetons)`;
                     btnRechargeAd.disabled = false;
-                    alert("🎉 FÉLICITATIONS ! +5 Jetons ont été crédités à votre compte.");
-                }
-            }, 1000);
-        };
-    }
-}
+                    a
