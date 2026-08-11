@@ -1,1133 +1,301 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
-
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartPronoIA - Analyses & Pronostics Football par IA</title>
+    
+    <!-- BALISES SEO & OPEN GRAPH (ÉTAPE 3) -->
+    <meta name="description" content="Obtenez des analyses de matchs de football précises, des coupons combinés et des conseils VIP propulsés par intelligence artificielle.">
+    <meta property="og:title" content="SmartPronoIA - Pronostics Football IA">
+    <meta property="og:description" content="Prédisez les résultats des matchs, créez vos coupons combinés et accédez aux pronos VIP 95% confiance.">
+    <meta property="og:image" content="https://cdn-icons-png.flaticon.com/512/53/53283.png">
+    <meta property="og:type" content="website">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#0f172a">
 
-    <title>
-        SmartPronoIA - Pronostics Football
-    </title>
-
-
-    <meta
-        name="description"
-        content="SmartPronoIA - Analyses et informations football."
-    >
-
-
-    <meta
-        name="theme-color"
-        content="#0f172a"
-    >
-
-
-    <link
-        rel="manifest"
-        href="./manifest.json"
-    >
-
+    <!-- 💡 ÉTAPE 1 : EMPLACEMENT OFFICIEL SCRIPT PUBLICITAIRE MONETAG -->
+    <!-- Remplacez "YOUR_ZONE_ID" par votre ID de zone fourni par Monetag -->
+    <!-- <script src="//thubanoa.com/1?z=YOUR_ZONE_ID" async data-cfasync="false"></script> -->
 
     <style>
-
         :root {
-
-            --bg-color:#0f172a;
-
-            --card-bg:#1e293b;
-
-            --primary:#38bdf8;
-
-            --accent:#22c55e;
-
-            --text-color:#f8fafc;
-
-            --text-muted:#94a3b8;
-
-            --border-color:#334155;
-
-            --inner-bg:#0f172a;
-
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --primary: #38bdf8;
+            --accent: #22c55e;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --inner-bg: #0f172a;
         }
-
 
         body.light-mode {
-
-            --bg-color:#f1f5f9;
-
-            --card-bg:#ffffff;
-
-            --primary:#0284c7;
-
-            --accent:#16a34a;
-
-            --text-color:#0f172a;
-
-            --text-muted:#64748b;
-
-            --border-color:#cbd5e1;
-
-            --inner-bg:#f8fafc;
-
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --primary: #0284c7;
+            --accent: #16a34a;
+            --text-color: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+            --inner-bg: #f8fafc;
         }
-
-
-        * {
-            box-sizing:border-box;
-        }
-
 
         body {
-
-            font-family:
-                -apple-system,
-                BlinkMacSystemFont,
-                "Segoe UI",
-                Roboto,
-                sans-serif;
-
-            background:
-                var(--bg-color);
-
-            color:
-                var(--text-color);
-
-            margin:0;
-
-            padding:15px;
-
-            padding-bottom:80px;
-
-            transition:
-                background-color .3s,
-                color .3s;
-
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 15px;
+            padding-bottom: 75px;
+            transition: background-color 0.3s, color 0.3s;
         }
-
 
         header {
-
-            display:flex;
-
-            justify-content:space-between;
-
-            align-items:center;
-
-            padding-bottom:15px;
-
-            border-bottom:
-                1px solid var(--border-color);
-
-            margin-bottom:15px;
-
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 15px;
         }
 
-
-        .logo {
-
-            font-size:1.15rem;
-
-            font-weight:800;
-
-            color:var(--primary);
-
+        .logo { font-size: 1.15rem; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; }
+        .header-actions { display: flex; align-items: center; gap: 8px; }
+        .theme-toggle { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); padding: 5px 10px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; }
+        .user-badge { 
+            background: rgba(56, 189, 248, 0.1); 
+            padding: 6px 14px; 
+            border-radius: 20px; 
+            font-size: 0.85rem; 
+            font-weight: 700; 
+            border: 1px solid var(--primary);
+            color: var(--primary);
         }
-
-
-        .header-actions {
-
-            display:flex;
-
-            align-items:center;
-
-            gap:8px;
-
-        }
-
-
-        .theme-toggle {
-
-            background:var(--card-bg);
-
-            border:
-                1px solid var(--border-color);
-
-            color:var(--text-color);
-
-            padding:6px 10px;
-
-            border-radius:20px;
-
-            cursor:pointer;
-
-        }
-
-
-        .user-badge {
-
-            background:
-                rgba(56,189,248,.1);
-
-            padding:6px 12px;
-
-            border-radius:20px;
-
-            font-weight:bold;
-
-            border:
-                1px solid var(--primary);
-
-            color:var(--primary);
-
-        }
-
 
         .pwa-banner {
-
-            background:#2563eb;
-
-            color:white;
-
-            padding:10px 15px;
-
-            border-radius:8px;
-
-            display:none;
-
-            justify-content:space-between;
-
-            align-items:center;
-
-            margin-bottom:15px;
-
-            font-size:.85rem;
-
+            background: #2563eb; color: white; padding: 10px 15px; border-radius: 8px;
+            display: none; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 0.85rem;
         }
-
 
         .card {
-
-            background:
-                var(--card-bg);
-
-            border-radius:12px;
-
-            padding:15px;
-
-            border:
-                1px solid var(--border-color);
-
-            margin-bottom:15px;
-
-            box-shadow:
-                0 4px 12px rgba(0,0,0,.15);
-
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
+        .card h3 { margin-top: 0; font-size: 1rem; }
 
-        .card h3 {
-
-            margin-top:0;
-
-            font-size:1rem;
-
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px; }
+        select, input {
+            width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);
+            background: var(--inner-bg); color: var(--text-color); box-sizing: border-box; font-size: 0.9rem;
         }
-
-
-        .form-group {
-
-            margin-bottom:12px;
-
-        }
-
-
-        label {
-
-            display:block;
-
-            font-size:.8rem;
-
-            color:var(--text-muted);
-
-            margin-bottom:5px;
-
-        }
-
-
-        select,
-        input {
-
-            width:100%;
-
-            padding:10px;
-
-            border-radius:6px;
-
-            border:
-                1px solid var(--border-color);
-
-            background:
-                var(--inner-bg);
-
-            color:
-                var(--text-color);
-
-            font-size:.9rem;
-
-        }
-
 
         .league-pills {
-
-            display:flex;
-
-            gap:8px;
-
-            overflow-x:auto;
-
-            padding-bottom:8px;
-
-            margin-bottom:12px;
-
-            scrollbar-width:none;
-
+            display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px;
+            scrollbar-width: none;
         }
-
-
-        .league-pills::-webkit-scrollbar {
-
-            display:none;
-
-        }
-
-
+        .league-pills::-webkit-scrollbar { display: none; }
         .pill {
-
-            white-space:nowrap;
-
-            background:
-                var(--inner-bg);
-
-            border:
-                1px solid var(--border-color);
-
-            color:
-                var(--text-muted);
-
-            padding:6px 12px;
-
-            border-radius:20px;
-
-            font-size:.75rem;
-
-            font-weight:600;
-
-            cursor:pointer;
-
+            white-space: nowrap; background: var(--inner-bg); border: 1px solid var(--border-color);
+            color: var(--text-muted); padding: 6px 12px; border-radius: 20px; font-size: 0.75rem;
+            font-weight: 600; cursor: pointer; transition: all 0.2s;
         }
+        .pill.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
-
-        .pill.active {
-
-            background:
-                var(--primary);
-
-            color:white;
-
-            border-color:
-                var(--primary);
-
-        }
-
-
-        .team-inputs {
-
-            display:flex;
-
-            gap:10px;
-
-            align-items:center;
-
-        }
-
+        .team-inputs { display: flex; gap: 10px; align-items: center; }
 
         .btn-generate {
-
-            width:100%;
-
-            background:#2563eb;
-
-            color:white;
-
-            border:none;
-
-            padding:12px;
-
-            border-radius:8px;
-
-            font-weight:bold;
-
-            font-size:.95rem;
-
-            cursor:pointer;
-
-            margin-top:10px;
-
+            width: 100%; background: #2563eb; color: white; border: none; padding: 12px;
+            border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer; margin-top: 10px;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
         }
-
 
         .btn-recharge {
-
-            width:100%;
-
-            background:var(--accent);
-
-            color:#000;
-
-            border:none;
-
-            padding:12px;
-
-            border-radius:8px;
-
-            font-weight:bold;
-
-            cursor:pointer;
-
+            width: 100%; background: var(--accent); color: #000; border: none; padding: 12px;
+            border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px;
+            font-size: 0.9rem;
         }
-
 
         .btn-telegram {
-
-            display:block;
-
-            width:100%;
-
-            background:#0088cc;
-
-            color:white;
-
-            text-align:center;
-
-            padding:12px;
-
-            border-radius:8px;
-
-            font-weight:bold;
-
-            text-decoration:none;
-
+            display: block; width: 100%; background: #0088cc; color: white; text-align: center;
+            padding: 12px; border-radius: 8px; font-weight: bold; text-decoration: none;
+            font-size: 0.9rem; box-sizing: border-box; margin-top: 10px;
         }
-
 
         .btn-danger {
-
-            background:transparent;
-
-            color:#ef4444;
-
-            border:
-                1px solid #ef4444;
-
-            padding:5px 10px;
-
-            border-radius:6px;
-
-            cursor:pointer;
-
+            background: transparent; color: #ef4444; border: 1px solid #ef4444; padding: 5px 10px;
+            border-radius: 6px; font-size: 0.75rem; cursor: pointer;
         }
 
-
-        .page-section {
-
-            display:none;
-
-        }
-
-
-        .page-section.active {
-
-            display:block;
-
-        }
-
+        .page-section { display: none; }
+        .page-section.active { display: block; }
 
         .nav-tabs {
-
-            position:fixed;
-
-            bottom:0;
-
-            left:0;
-
-            right:0;
-
-            background:
-                var(--bg-color);
-
-            display:flex;
-
-            justify-content:space-around;
-
-            padding:12px 0;
-
-            border-top:
-                1px solid var(--border-color);
-
-            z-index:1000;
-
+            position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-color);
+            display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid var(--border-color); z-index: 1000;
         }
 
-
-        .tab-item {
-
-            color:
-                var(--text-muted);
-
-            font-size:.85rem;
-
-            text-align:center;
-
-            cursor:pointer;
-
-            flex:1;
-
-        }
-
-
-        .tab-item.active {
-
-            color:
-                var(--primary);
-
-            font-weight:bold;
-
-        }
-
+        .tab-item { color: var(--text-muted); font-size: 0.85rem; text-align: center; cursor: pointer; flex: 1; }
+        .tab-item.active { color: var(--primary); font-weight: bold; }
     </style>
-
 </head>
-
-
 <body>
 
+    <header>
+        <div class="logo">⚽ <span>SmartPronoIA</span></div>
+        <div class="header-actions">
+            <button class="theme-toggle" onclick="toggleTheme()">☀️ Mode</button>
+            <div class="user-badge">🪙 <span id="credits-count">10</span></div>
+        </div>
+    </header>
 
-<header>
-
-    <div class="logo">
-        ⚽ SmartPronoIA
+    <!-- BANNIÈRE INSTALLATION PWA -->
+    <div id="pwa-banner" class="pwa-banner">
+        <span>📲 Installer l'application sur votre écran</span>
+        <button onclick="installPWA()" style="background: white; color: #2563eb; border: none; padding: 5px 10px; border-radius: 6px; font-weight: bold; cursor: pointer;">Installer</button>
     </div>
 
+    <!-- SECTION PRONOS -->
+    <div id="section-pronos" class="page-section active">
+        <div id="coupon-wrapper"></div>
 
-    <div class="header-actions">
-
-        <button
-            class="theme-toggle"
-            onclick="toggleTheme()"
-        >
-            ☀️ Mode
-        </button>
-
-
-        <div class="user-badge">
-
-            🪙
-            <span id="credits-count">
-                10
-            </span>
-
-        </div>
-
-    </div>
-
-</header>
-
-
-<!-- PWA -->
-
-<div
-    id="pwa-banner"
-    class="pwa-banner"
->
-
-    <span>
-        📲 Installer l'application
-    </span>
-
-
-    <button
-        onclick="installPWA()"
-        style="
-            background:white;
-            color:#2563eb;
-            border:none;
-            padding:5px 10px;
-            border-radius:6px;
-            font-weight:bold;
-        "
-    >
-        Installer
-    </button>
-
-</div>
-
-
-<!-- =====================================================
-     PRONOSTICS
-     ===================================================== -->
-
-<div
-    id="section-pronos"
-    class="page-section active"
->
-
-
-    <div id="coupon-wrapper"></div>
-
-
-    <!-- SÉLECTION -->
-
-    <div
-        class="card"
-        id="card-selection"
-    >
-
-        <h3>
-            📊 Sélection Rapide
-        </h3>
-
-
-        <div class="form-group">
-
-            <label>
-                Championnat :
-            </label>
-
-
-            <select
-                id="league-select"
-                onchange="filterMatches()"
-            >
-            </select>
-
-        </div>
-
-
-        <div class="form-group">
-
-            <div class="team-inputs">
-
-                <input
-                    type="text"
-                    id="home-team"
-                    placeholder="Domicile"
-                >
-
-
-                <span
-                    style="
-                        color:var(--primary);
-                        font-weight:bold;
-                    "
-                >
-                    VS
-                </span>
-
-
-                <input
-                    type="text"
-                    id="away-team"
-                    placeholder="Extérieur"
-                >
-
+        <div class="card" id="card-selection">
+            <h3>📊 Sélection Rapide</h3>
+            <div class="form-group">
+                <label>Championnat :</label>
+                <select id="league-select" onchange="filterMatches()"></select>
             </div>
 
-        </div>
-
-
-        <button
-            id="btn-generate"
-            class="btn-generate"
-        >
-            ⚡ Générer l'Analyse (1 Jeton)
-        </button>
-
-    </div>
-
-
-    <!-- MATCHS RÉELS -->
-
-    <div class="card">
-
-        <h3>
-            📅 Matchs Réels du Jour
-        </h3>
-
-
-        <div
-            id="matches-api-status"
-            style="
-                font-size:.7rem;
-                color:var(--text-muted);
-                margin-bottom:8px;
-            "
-        >
-            🌐 Connexion à TheSportsDB...
-        </div>
-
-
-        <div
-            class="league-pills"
-            id="league-pills-container"
-        >
-        </div>
-
-
-        <div
-            class="form-group"
-            style="margin-bottom:12px;"
-        >
-
-            <input
-                type="text"
-                id="search-input"
-                placeholder="🔍 Rechercher une équipe..."
-                oninput="filterMatches()"
-            >
-
-        </div>
-
-
-        <div id="matches-container">
-
-            <div
-                style="
-                    text-align:center;
-                    padding:20px;
-                    color:var(--text-muted);
-                "
-            >
-                ⏳ Chargement des matchs réels...
+            <div class="form-group">
+                <div class="team-inputs">
+                    <input type="text" id="home-team" placeholder="Domicile">
+                    <span style="color: var(--primary); font-weight: bold;">VS</span>
+                    <input type="text" id="away-team" placeholder="Extérieur">
+                </div>
             </div>
 
+            <button id="btn-generate" class="btn-generate">⚡ Générer l'Analyse (1 Jeton)</button>
         </div>
 
-    </div>
+        <div class="card">
+            <h3>📅 Matchs Réels du Jour</h3>
+            <div class="league-pills" id="league-pills-container"></div>
 
-</div>
-
-
-<!-- =====================================================
-     VIP
-     ===================================================== -->
-
-<div
-    id="section-vip"
-    class="page-section"
->
-
-    <div
-        class="card"
-        style="
-            border:2px solid #eab308;
-        "
-    >
-
-        <h3
-            style="color:#eab308;"
-        >
-            🔥 Pronostics VIP
-        </h3>
-
-
-        <p
-            style="
-                font-size:.8rem;
-                color:var(--text-muted);
-            "
-        >
-            Retrouvez ici vos contenus premium.
-        </p>
-
-
-        <div
-            id="vip-matches-list"
-        >
-
-            <div
-                style="
-                    background:var(--inner-bg);
-                    padding:12px;
-                    border-radius:7px;
-                "
-            >
-
-                🔒 Contenu VIP réservé aux abonnés.
-
+            <div class="form-group" style="margin-bottom: 12px;">
+                <input type="text" id="search-input" placeholder="🔍 Rechercher une équipe..." oninput="filterMatches()">
             </div>
-
-        </div>
-
-    </div>
-
-</div>
-
-
-<!-- =====================================================
-     DIRECT
-     ===================================================== -->
-
-<div
-    id="section-direct"
-    class="page-section"
->
-
-    <div class="card">
-
-        <h3>
-            🔴 Matchs en Direct
-        </h3>
-
-
-        <div
-            id="live-matches-container"
-        >
-
-            <div
-                style="
-                    text-align:center;
-                    padding:20px;
-                    color:var(--text-muted);
-                "
-            >
-                🔎 Recherche des matchs en direct...
+            
+            <div id="matches-container">
+                <div style="text-align:center; padding:15px; color:#94a3b8;">⏳ Chargement...</div>
             </div>
-
         </div>
-
     </div>
 
-</div>
-
-
-<!-- =====================================================
-     COMPTE
-     ===================================================== -->
-
-<div
-    id="section-compte"
-    class="page-section"
->
-
-
-    <div
-        class="card"
-        style="text-align:center;"
-    >
-
-        <h3>
-            👤 Mon Compte
-        </h3>
-
-
-        <p>
-
-            Solde actuel :
-
-            <strong
-                id="account-credits"
-            >
-                10
-            </strong>
-
-            Jetons
-
-        </p>
-
-    </div>
-
-
-    <!-- TELEGRAM -->
-
-    <div class="card">
-
-        <h3>
-            📢 Communauté VIP
-        </h3>
-
-
-        <p
-            style="
-                font-size:.8rem;
-                color:var(--text-muted);
-            "
-        >
-            Rejoignez notre canal officiel.
-        </p>
-
-
-        <a
-            href="https://t.me/votre_canal_telegram"
-            target="_blank"
-            class="btn-telegram"
-        >
-            🚀 Rejoindre le Canal Telegram
-        </a>
-
-    </div>
-
-
-    <!-- HISTORIQUE -->
-
-    <div class="card">
-
-        <div
-            style="
-                display:flex;
-                justify-content:space-between;
-                align-items:center;
-            "
-        >
-
-            <h3 style="margin:0;">
-                📜 Mes Dernières Analyses
-            </h3>
-
-
-            <button
-                class="btn-danger"
-                onclick="clearHistory()"
-            >
-                Vider
-            </button>
-
-        </div>
-
-
-        <div
-            id="history-container"
-            style="margin-top:10px;"
-        >
-
-            <div
-                style="
-                    text-align:center;
-                    padding:10px;
-                    color:var(--text-muted);
-                "
-            >
-                Aucune analyse enregistrée.
+    <!-- SECTION VIP -->
+    <div id="section-vip" class="page-section">
+        <div class="card" style="border: 2px solid #eab308; background: linear-gradient(135deg, var(--card-bg) 0%, var(--inner-bg) 100%);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="margin:0; color:#eab308;">🔥 Pronostics VIP (95% Confiance)</h3>
+                <span style="background:#eab308; color:#000; font-size:0.7rem; font-weight:bold; padding:2px 8px; border-radius:10px;">PRO</span>
             </div>
+            <div id="vip-matches-list">
+                <div style="background: var(--inner-bg); padding: 10px; border-radius: 6px; margin-top: 8px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-size: 0.85rem; font-weight: bold;">Paris SG VS Marseille</div>
+                        <div style="font-size: 0.75rem; color: var(--accent); font-weight: bold; margin-top: 2px;">💡 Conseil : Victoire Paris SG</div>
+                    </div>
+                    <button onclick="selectMatch('Paris SG', 'Marseille')" style="background:#eab308; color:#000; font-weight:bold; border:none; border-radius:4px; padding:6px 10px; font-size:0.75rem; cursor:pointer;">Choisir</button>
+                </div>
+                <div style="background: var(--inner-bg); padding: 10px; border-radius: 6px; margin-top: 8px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-size: 0.85rem; font-weight: bold;">Real Madrid VS FC Barcelona</div>
+                        <div style="font-size: 0.75rem; color: var(--accent); font-weight: bold; margin-top: 2px;">💡 Conseil : Plus de 2.5 Buts</div>
+                    </div>
+                    <button onclick="selectMatch('Real Madrid', 'FC Barcelona')" style="background:#eab308; color:#000; font-weight:bold; border:none; border-radius:4px; padding:6px 10px; font-size:0.75rem; cursor:pointer;">Choisir</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <!-- SECTION DIRECT -->
+    <div id="section-direct" class="page-section">
+        <div class="card">
+            <h3>🔴 Matchs en Direct</h3>
+            <div id="live-matches-container">
+                <div style="text-align:center; padding:15px; color:#94a3b8;">⚡ Recherche...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION COMPTE -->
+    <div id="section-compte" class="page-section">
+        <div class="card" style="text-align: center;">
+            <h3>👤 Mon Compte</h3>
+            <p style="font-size: 0.9rem;">Solde actuel : <strong id="account-credits">10</strong> Jetons</p>
         </div>
 
+        <!-- 📢 ÉTAPE 2 : CANAL TELEGRAM DE LA COMMUNAUTÉ -->
+        <div class="card">
+            <h3>📢 Communauté VIP</h3>
+            <p style="font-size:0.8rem; color:var(--text-muted);">Rejoignez notre canal officiel pour recevoir des coupons exclusifs tous les jours.</p>
+            <a href="https://t.me/votre_canal_telegram" target="_blank" class="btn-telegram">🚀 Rejoindre le Canal Telegram</a>
+        </div>
+
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0;">📜 Mes Dernières Analyses</h3>
+                <button class="btn-danger" onclick="clearHistory()">Vider</button>
+            </div>
+            <div id="history-container" style="margin-top:10px;">
+                <div style="text-align:center; padding:10px; color:#94a3b8; font-size:0.85rem;">Aucune analyse enregistrée.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>🪙 Recharger des Jetons</h3>
+            <p style="font-size:0.8rem; color:#94a3b8;">Visionnez une publicité sponsorisée pour créditer +5 jetons.</p>
+            <button class="btn-recharge" id="btn-recharge-ad">🎬 Regarder une pub (+5 Jetons)</button>
+        </div>
     </div>
 
+    <!-- MENU DU BAS -->
+    <nav class="nav-tabs">
+        <div id="tab-pronos" class="tab-item active" onclick="switchTab('pronos')">Pronos</div>
+        <div id="tab-vip" class="tab-item" onclick="switchTab('vip')">⭐ VIP</div>
+        <div id="tab-direct" class="tab-item" onclick="switchTab('direct')">Direct</div>
+        <div id="tab-compte" class="tab-item" onclick="switchTab('compte')">Compte</div>
+    </nav>
 
-    <!-- PUBLICITÉ -->
+    <script src="./script.js"></script>
+    <script>
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const banner = document.getElementById('pwa-banner');
+            if (banner) banner.style.display = 'flex';
+        });
 
-    <div class="card">
-
-        <h3>
-            🪙 Recharger des Jetons
-        </h3>
-
-
-        <p
-            style="
-                font-size:.8rem;
-                color:var(--text-muted);
-            "
-        >
-            Regardez une publicité pour obtenir
-            des jetons supplémentaires.
-        </p>
-
-
-        <button
-            class="btn-recharge"
-            id="btn-recharge-ad"
-        >
-            🎬 Regarder une pub (+5 Jetons)
-        </button>
-
-    </div>
-
-</div>
-
-
-<!-- =====================================================
-     MENU BAS
-     ===================================================== -->
-
-<nav class="nav-tabs">
-
-    <div
-        id="tab-pronos"
-        class="tab-item active"
-        onclick="switchTab('pronos')"
-    >
-        ⚽ Pronos
-    </div>
-
-
-    <div
-        id="tab-vip"
-        class="tab-item"
-        onclick="switchTab('vip')"
-    >
-        ⭐ VIP
-    </div>
-
-
-    <div
-        id="tab-direct"
-        class="tab-item"
-        onclick="switchTab('direct')"
-    >
-        🔴 Direct
-    </div>
-
-
-    <div
-        id="tab-compte"
-        class="tab-item"
-        onclick="switchTab('compte')"
-    >
-        👤 Compte
-    </div>
-
-</nav>
-
-
-<!-- =====================================================
-     JAVASCRIPT
-     ===================================================== -->
-
-<script src="./script.js"></script>
-
-
-<script>
-
-    /* =====================================================
-       MODE SOMBRE / CLAIR
-       ===================================================== */
-
-    window.toggleTheme = function() {
-
-        document.body.classList.toggle(
-            "light-mode"
-        );
-
-
-        const isLight =
-            document.body.classList.contains(
-                "light-mode"
-            );
-
-
-        localStorage.setItem(
-            "smartprono_theme",
-            isLight
-                ? "light"
-                : "dark"
-        );
-
-    };
-
-
-    /* =====================================================
-       PWA
-       ===================================================== */
-
-    let deferredPrompt;
-
-
-    window.addEventListener(
-        "beforeinstallprompt",
-        event => {
-
-            event.preventDefault();
-
-            deferredPrompt = event;
-
-
-            const banner =
-                document.getElementById(
-                    "pwa-banner"
-                );
-
-
-            if (banner) {
-                banner.style.display =
-                    "flex";
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(() => {
+                    deferredPrompt = null;
+                    document.getElementById('pwa-banner').style.display = 'none';
+                });
             }
-
-        }
-    );
-
-
-    window.installPWA = function() {
-
-        if (!deferredPrompt) {
-            return;
         }
 
-
-        deferredPrompt.prompt();
-
-
-        deferredPrompt.userChoice
-            .then(() => {
-
-                deferredPrompt = null;
-
-
-                const banner =
-                    document.getElementById(
-                        "pwa-banner"
-                    );
-
-
-                if (banner) {
-                    banner.style.display =
-                        "none";
-                }
-
-            });
-
-    };
-
-
-    /* =====================================================
-       SERVICE WORKER
-       ===================================================== */
-
-    if (
-        "serviceWorker" in navigator
-    ) {
-
-        navigator.serviceWorker
-            .register("./sw.js")
-            .catch(error => {
-
-                console.log(
-                    "Service Worker :",
-                    error
-                );
-
-            });
-
-    }
-
-</script>
-
-
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(() => {});
+        }
+    </script>
 </body>
-
 </html>
