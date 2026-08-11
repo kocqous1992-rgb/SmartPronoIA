@@ -1,6 +1,3 @@
-const RAPIDAPI_KEY = "7d9b66678fmshd0019de43d79a8ep128be2jsnf352f152003a";
-const RAPIDAPI_HOST = "api-football-v1.p.rapidapi.com";
-
 const EXTENDED_LEAGUES = [
     { value: "ALL", name: "🌐 Toutes" },
     { value: "Ligue 1", name: "⚽ Ligue 1" },
@@ -13,22 +10,29 @@ const EXTENDED_LEAGUES = [
     { value: "Saudi Pro League", name: "🇸🇦 Saudi League" }
 ];
 
-const FALLBACK_MATCHES = [
-    { home: "Paris SG", away: "Marseille", league: "Ligue 1", leagueName: "⚽ Ligue 1 (France)" },
-    { home: "Real Madrid", away: "FC Barcelona", league: "La Liga", leagueName: "🇪🇸 La Liga (Espagne)" },
-    { home: "Arsenal", away: "Manchester City", league: "Premier League", leagueName: "🇬🇧 Premier League (Angleterre)" },
-    { home: "Bayern München", away: "Dortmund", league: "Bundesliga", leagueName: "🇩🇪 Bundesliga (Allemagne)" },
-    { home: "Inter", away: "AC Milan", league: "Serie A", leagueName: "🇮🇹 Serie A (Italie)" },
-    { home: "Al Ahly", away: "Zamalek", league: "CAF Champions League", leagueName: "🌍 Ligue des Champions CAF" }
+const MATCHES_DATA = [
+    { home: "Paris SG", away: "Marseille", league: "Ligue 1", leagueName: "⚽ Ligue 1 (France)", live: true, scoreHome: 2, scoreAway: 1, minute: "64'" },
+    { home: "Real Madrid", away: "FC Barcelona", league: "La Liga", leagueName: "🇪🇸 La Liga (Espagne)", live: true, scoreHome: 1, scoreAway: 1, minute: "38'" },
+    { home: "Arsenal", away: "Manchester City", league: "Premier League", leagueName: "🇬🇧 Premier League (Angleterre)", live: true, scoreHome: 0, scoreAway: 0, minute: "12'" },
+    { home: "Lyon", away: "Monaco", league: "Ligue 1", leagueName: "⚽ Ligue 1 (France)", live: false },
+    { home: "Atletico Madrid", away: "Sevilla", league: "La Liga", leagueName: "🇪🇸 La Liga (Espagne)", live: false },
+    { home: "Liverpool", away: "Chelsea", league: "Premier League", leagueName: "🇬🇧 Premier League (Angleterre)", live: false },
+    { home: "Bayern München", away: "Dortmund", league: "Bundesliga", leagueName: "🇩🇪 Bundesliga (Allemagne)", live: false },
+    { home: "Inter", away: "AC Milan", league: "Serie A", leagueName: "🇮🇹 Serie A (Italie)", live: false },
+    { home: "Juventus", away: "Napoli", league: "Serie A", leagueName: "🇮🇹 Serie A (Italie)", live: false },
+    { home: "Al Ahly", away: "Zamalek", league: "CAF Champions League", leagueName: "🌍 Ligue des Champions CAF", live: false },
+    { home: "Wydad Casablanca", away: "Raja Casablanca", league: "CAF Champions League", leagueName: "🌍 Ligue des Champions CAF", live: false },
+    { home: "Al Hilal", away: "Al Nassr", league: "Saudi Pro League", leagueName: "🇸🇦 Saudi Pro League", live: false }
 ];
 
-let globalMatchesData = [];
 let couponList = [];
 let currentFilterLeague = "ALL";
 
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
     populateLeagueSelect();
     renderLeaguePills();
+    renderMatchesList(MATCHES_DATA);
+    renderLiveMatchesList();
     syncCreditsUI();
     setupEventListeners();
     loadHistoryUI();
@@ -36,89 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (localStorage.getItem('smartprono_theme') === 'light') {
         document.body.classList.add('light-mode');
     }
-
-    await fetchRealMatchesFromAPI();
 });
-
-function getTodayDateString() {
-    const d = new Date();
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
-async function fetchRealMatchesFromAPI() {
-    const today = getTodayDateString();
-    const url = `https://${RAPIDAPI_HOST}/v3/fixtures?date=${today}`;
-
-    try {
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'x-rapidapi-key': RAPIDAPI_KEY,
-                'x-rapidapi-host': RAPIDAPI_HOST
-            }
-        });
-
-        const data = await response.json();
-
-        if (data && data.response && data.response.length > 0) {
-            globalMatchesData = data.response.map(item => ({
-                home: item.teams.home.name,
-                away: item.teams.away.name,
-                league: item.league.name || "ALL",
-                leagueName: `⚽ ${item.league.name} (${item.league.country})`,
-                status: item.fixture.status.short,
-                elapsed: item.fixture.status.elapsed,
-                goalsHome: item.goals.home ?? 0,
-                goalsAway: item.goals.away ?? 0
-            }));
-            renderMatchesList(globalMatchesData);
-            renderLiveMatchesList();
-        } else {
-            useFallbackData();
-        }
-    } catch (error) {
-        console.log("Erreur API-Football, chargement données de secours.");
-        useFallbackData();
-    }
-}
-
-function useFallbackData() {
-    globalMatchesData = FALLBACK_MATCHES;
-    renderMatchesList(globalMatchesData);
-    renderLiveMatchesList();
-}
-
-function renderLiveMatchesList() {
-    const liveContainer = document.getElementById('live-matches-container');
-    if (!liveContainer) return;
-
-    // Filtre les matchs dont le statut est en cours (1H, HT, 2H, ET, P, LIVE)
-    const liveStatuses = ["1H", "HT", "2H", "ET", "P", "LIVE"];
-    const liveList = globalMatchesData.filter(m => liveStatuses.includes(m.status));
-
-    if (liveList.length === 0) {
-        liveContainer.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Aucun match en direct pour le moment.</div>`;
-        return;
-    }
-
-    liveContainer.innerHTML = liveList.map(m => `
-        <div style="background: var(--inner-bg); margin: 8px 0; padding: 12px; border-radius: 6px; border: 1px solid #ef4444;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <span style="font-size:0.75rem; color:var(--text-muted);">${m.leagueName}</span>
-                <span style="background:#ef4444; color:white; font-size:0.65rem; font-weight:bold; padding:2px 6px; border-radius:10px;">🔴 ${m.elapsed}'</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div style="font-size: 0.85rem; font-weight: bold; flex:1;">
-                    ${m.home} <span style="color:#ef4444; margin:0 4px;">${m.goalsHome} - ${m.goalsAway}</span> ${m.away}
-                </div>
-                <button onclick="selectMatch('${m.home.replace(/'/g, "\\'")}', '${m.away.replace(/'/g, "\\'")}')" style="background:var(--card-bg); color:var(--primary); border:1px solid var(--primary); padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Analyser</button>
-            </div>
-        </div>
-    `).join('');
-}
 
 window.toggleTheme = function() {
     document.body.classList.toggle('light-mode');
@@ -159,10 +81,10 @@ window.filterMatches = function() {
 
     const searchInput = document.getElementById('search-input')?.value.toLowerCase().trim() || '';
 
-    let filtered = globalMatchesData;
+    let filtered = MATCHES_DATA;
 
     if (selectedLeague !== 'ALL') {
-        filtered = filtered.filter(m => m.league.toLowerCase().includes(selectedLeague.toLowerCase()));
+        filtered = filtered.filter(m => m.league === selectedLeague);
     }
 
     if (searchInput !== '') {
@@ -197,6 +119,28 @@ function renderMatchesList(list) {
     `).join('');
 
     if (container) container.innerHTML = html;
+}
+
+function renderLiveMatchesList() {
+    const liveContainer = document.getElementById('live-matches-container');
+    if (!liveContainer) return;
+
+    const liveSelection = MATCHES_DATA.filter(m => m.live);
+
+    liveContainer.innerHTML = liveSelection.map(m => `
+        <div style="background: var(--inner-bg); margin: 8px 0; padding: 12px; border-radius: 6px; border: 1px solid #ef4444;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <span style="font-size:0.75rem; color:var(--text-muted);">${m.leagueName}</span>
+                <span style="background:#ef4444; color:white; font-size:0.65rem; font-weight:bold; padding:2px 6px; border-radius:10px;">🔴 ${m.minute}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-size: 0.85rem; font-weight: bold; flex:1;">
+                    ${m.home} <span style="color:#ef4444; margin:0 4px;">${m.scoreHome} - ${m.scoreAway}</span> ${m.away}
+                </div>
+                <button onclick="selectMatch('${m.home.replace(/'/g, "\\'")}', '${m.away.replace(/'/g, "\\'")}')" style="background:var(--card-bg); color:var(--primary); border:1px solid var(--primary); padding:5px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Analyser</button>
+            </div>
+        </div>
+    `).join('');
 }
 
 window.addToCoupon = function(home, away) {
@@ -440,4 +384,11 @@ function setupEventListeners() {
                         clearInterval(interval);
                         updateCredits(getCredits() + 5);
                         btnRechargeAd.innerText = `🎬 Regarder une pub (+5 Jetons)`;
-                       
+                        btnRechargeAd.disabled = false;
+                        alert("🎉 FÉLICITATIONS ! +5 Jetons ont été crédités à votre compte.");
+                    }
+                }, 1000);
+            }
+        };
+    }
+}
