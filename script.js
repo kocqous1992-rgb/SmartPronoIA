@@ -1,17 +1,15 @@
-const SCOREBAT_API_URL = "https://www.scorebat.com/video-api/v3/feed/?token=MTc5NTI0XzE3MjM0MDExMjFfN2NlZGU1NTcxNGNmMWFlZGY0MDlhZmViNGRhYWE3NTQ3ZGNkMGQzMg==";
-
 let realMatchesList = [];
 let couponList = [];
 let currentFilterLeague = "ALL";
 
 const EXTENDED_LEAGUES = [
     { value: "ALL", name: "🌐 Toutes" },
-    { value: "ENGLAND", name: "🇬🇧 Premier League" },
-    { value: "SPAIN", name: "🇪🇸 La Liga" },
-    { value: "FRANCE", name: "⚽ Ligue 1" },
-    { value: "ITALY", name: "🇮🇹 Serie A" },
-    { value: "GERMANY", name: "🇩🇪 Bundesliga" },
-    { value: "CHAMPIONS LEAGUE", name: "🏆 Champions League" }
+    { value: "Ligue 1", name: "⚽ Ligue 1" },
+    { value: "Premier League", name: "🇬🇧 Premier League" },
+    { value: "La Liga", name: "🇪🇸 La Liga" },
+    { value: "Serie A", name: "🇮🇹 Serie A" },
+    { value: "Bundesliga", name: "🇩🇪 Bundesliga" },
+    { value: "Champions League", name: "🏆 Champions League" }
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -28,35 +26,44 @@ document.addEventListener('DOMContentLoaded', () => {
     loadTodayMatches();
 });
 
+function getTodayFormattedDate() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 async function loadTodayMatches() {
     const container = document.getElementById('matches-container');
     const vipContainer = document.getElementById('vip-matches-list');
     const liveContainer = document.getElementById('live-matches-container');
 
     if (container) {
-        container.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">⏳ Chargement des matchs réels...</div>`;
+        container.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">⏳ Chargement des matchs réels depuis l'API...</div>`;
     }
 
+    const dateStr = getTodayFormattedDate();
+    // Utilisation d'un relais CORS fiable vers l'API des matchs
+    const targetUrl = `https://www.thesportsdb.com/api/v1/json/3/eventsday.php?s=Soccer&d=${dateStr}`;
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+
     try {
-        const response = await fetch(SCOREBAT_API_URL);
-        if (!response.ok) throw new Error("Erreur HTTP " + response.status);
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error("HTTP " + response.status);
 
-        const data = await response.json();
+        const result = await response.json();
+        const data = JSON.parse(result.contents);
 
-        if (data && data.response && data.response.length > 0) {
-            realMatchesList = data.response.map((m, idx) => {
-                const matchDate = m.date ? new Date(m.date) : new Date();
-                const timeStr = matchDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                
-                return {
-                    id: idx,
-                    home: m.side1 ? m.side1.name : "Équipe 1",
-                    away: m.side2 ? m.side2.name : "Équipe 2",
-                    leagueName: m.competition ? `⚽ ${m.competition}` : "⚽ Football",
-                    time: timeStr,
-                    title: m.title || ""
-                };
-            });
+        if (data && data.events && Array.isArray(data.events) && data.events.length > 0) {
+            realMatchesList = data.events.map((e, idx) => ({
+                id: e.idEvent || idx,
+                home: e.strHomeTeam,
+                away: e.strAwayTeam,
+                leagueName: e.strLeague ? `⚽ ${e.strLeague}` : "⚽ Football",
+                time: e.strTime ? e.strTime.substring(0, 5) : "",
+                status: e.strStatus || ""
+            }));
 
             renderMatchesList(realMatchesList);
             renderVIPMatches(realMatchesList);
@@ -67,7 +74,7 @@ async function loadTodayMatches() {
         }
     } catch (err) {
         realMatchesList = [];
-        showErrorState();
+        showEmptyState("Aucun match disponible pour cette date.");
     }
 }
 
@@ -76,27 +83,16 @@ function showEmptyState(msg) {
     const vipContainer = document.getElementById('vip-matches-list');
     const liveContainer = document.getElementById('live-matches-container');
 
-    const html = `<div style="text-align:center; padding:15px; color:var(--text-muted);">${msg}</div>`;
-    if (container) container.innerHTML = html;
-    if (vipContainer) vipContainer.innerHTML = html;
-    if (liveContainer) liveContainer.innerHTML = html;
-}
-
-function showErrorState() {
-    const container = document.getElementById('matches-container');
-    const vipContainer = document.getElementById('vip-matches-list');
-    const liveContainer = document.getElementById('live-matches-container');
-
-    const errorHtml = `
-        <div style="text-align:center; padding:15px; color:#ef4444;">
-            <div>⚠️ Erreur de connexion au serveur d'API.</div>
-            <button class="btn-retry" onclick="loadTodayMatches()">🔄 Réessayer</button>
+    const html = `
+        <div style="text-align:center; padding:15px; color:var(--text-muted);">
+            <div>${msg}</div>
+            <button class="btn-retry" onclick="loadTodayMatches()" style="margin-top:10px;">🔄 Réessayer</button>
         </div>
     `;
 
-    if (container) container.innerHTML = errorHtml;
-    if (vipContainer) vipContainer.innerHTML = errorHtml;
-    if (liveContainer) liveContainer.innerHTML = errorHtml;
+    if (container) container.innerHTML = html;
+    if (vipContainer) vipContainer.innerHTML = html;
+    if (liveContainer) liveContainer.innerHTML = html;
 }
 
 function renderMatchesList(list) {
@@ -159,7 +155,7 @@ function renderLiveMatchesList(list) {
         <div style="background: var(--inner-bg); margin: 8px 0; padding: 12px; border-radius: 6px; border: 1px solid #ef4444;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                 <span style="font-size:0.75rem; color:var(--text-muted);">${m.leagueName}</span>
-                <span style="background:#ef4444; color:white; font-size:0.65rem; font-weight:bold; padding:2px 6px; border-radius:10px;">🔴 En Direct</span>
+                <span style="background:#ef4444; color:white; font-size:0.65rem; font-weight:bold; padding:2px 6px; border-radius:10px;">🔴 Match Réel</span>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div style="font-size: 0.85rem; font-weight: bold; flex:1;">
@@ -218,7 +214,7 @@ window.filterMatches = function() {
     let filtered = realMatchesList;
 
     if (selectedLeague !== 'ALL') {
-        filtered = filtered.filter(m => m.leagueName.toUpperCase().includes(selectedLeague));
+        filtered = filtered.filter(m => m.leagueName.toLowerCase().includes(selectedLeague.toLowerCase()));
     }
 
     if (searchInput !== '') {
