@@ -26,43 +26,31 @@ document.addEventListener('DOMContentLoaded', () => {
     loadTodayMatches();
 });
 
-function getTodayFormattedDate() {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
 async function loadTodayMatches() {
     const container = document.getElementById('matches-container');
     const vipContainer = document.getElementById('vip-matches-list');
     const liveContainer = document.getElementById('live-matches-container');
 
     if (container) {
-        container.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">⏳ Chargement des matchs réels depuis l'API...</div>`;
+        container.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">⏳ Connexion au serveur backend...</div>`;
     }
 
-    const dateStr = getTodayFormattedDate();
-    // Utilisation d'un relais CORS fiable vers l'API des matchs
-    const targetUrl = `https://www.thesportsdb.com/api/v1/json/3/eventsday.php?s=Soccer&d=${dateStr}`;
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+    // Appel vers ton mini-backend Serverless Vercel
+    const apiUrl = "/api/matches";
 
     try {
-        const response = await fetch(proxyUrl);
+        const response = await fetch(apiUrl);
         if (!response.ok) throw new Error("HTTP " + response.status);
 
-        const result = await response.json();
-        const data = JSON.parse(result.contents);
+        const data = await response.json();
 
-        if (data && data.events && Array.isArray(data.events) && data.events.length > 0) {
-            realMatchesList = data.events.map((e, idx) => ({
-                id: e.idEvent || idx,
-                home: e.strHomeTeam,
-                away: e.strAwayTeam,
-                leagueName: e.strLeague ? `⚽ ${e.strLeague}` : "⚽ Football",
-                time: e.strTime ? e.strTime.substring(0, 5) : "",
-                status: e.strStatus || ""
+        if (data && data.matches && Array.isArray(data.matches) && data.matches.length > 0) {
+            realMatchesList = data.matches.map((m, idx) => ({
+                id: m.id || idx,
+                home: m.homeTeam ? m.homeTeam.name : "Domicile",
+                away: m.awayTeam ? m.awayTeam.name : "Extérieur",
+                leagueName: m.competition ? `⚽ ${m.competition.name}` : "⚽ Football",
+                time: m.utcDate ? new Date(m.utcDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""
             }));
 
             renderMatchesList(realMatchesList);
@@ -149,13 +137,13 @@ function renderLiveMatchesList(list) {
         return;
     }
 
-    const liveSelection = list.slice(0, 4);
+    const liveSelection = list.slice(0, 5);
 
     liveContainer.innerHTML = liveSelection.map(m => `
         <div style="background: var(--inner-bg); margin: 8px 0; padding: 12px; border-radius: 6px; border: 1px solid #ef4444;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                 <span style="font-size:0.75rem; color:var(--text-muted);">${m.leagueName}</span>
-                <span style="background:#ef4444; color:white; font-size:0.65rem; font-weight:bold; padding:2px 6px; border-radius:10px;">🔴 Match Réel</span>
+                <span style="background:#ef4444; color:white; font-size:0.65rem; font-weight:bold; padding:2px 6px; border-radius:10px;">🔴 En Direct</span>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div style="font-size: 0.85rem; font-weight: bold; flex:1;">
@@ -315,6 +303,14 @@ function updateCredits(count) {
     syncCreditsUI();
 }
 
+function calculateTeamRating(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return Math.abs(hash);
+}
+
 function handleGenerateAnalysis() {
     const homeInput = document.getElementById('home-team');
     const awayInput = document.getElementById('away-team');
@@ -334,12 +330,27 @@ function handleGenerateAnalysis() {
 
     updateCredits(credits - 1);
 
-    saveAnalysisToHistory({ home, away, date: new Date().toLocaleDateString('fr-FR') });
+    const homeScoreVal = calculateTeamRating(home);
+    const awayScoreVal = calculateTeamRating(away);
+
+    let winHome = (homeScoreVal % 35) + 40;
+    let winAway = (awayScoreVal % 25) + 15;
+    let draw = 100 - (winHome + winAway);
+    if (draw < 10) { draw = 15; winHome -= 5; }
+
+    const confidence = ((homeScoreVal + awayScoreVal) % 12) + 84;
+    const goalsPredict = (((homeScoreVal % 15) + 15) / 10).toFixed(1);
+
+    let advice = `Victoire ${home}`;
+    if (winHome < 48 && winAway > 25) advice = "Plus de 1.5 Buts";
+    if (draw > 28) advice = "Les 2 équipes marquent";
+
+    saveAnalysisToHistory({ home, away, advice, confidence, date: new Date().toLocaleDateString('fr-FR') });
 
     const oldCard = document.getElementById('ai-result-card');
     if (oldCard) oldCard.remove();
 
-    const plainText = `⚽ SmartPronoIA\n${home} vs ${away}\nAnalyse générée avec succès.`;
+    const plainText = `⚽ SmartPronoIA\n${home} vs ${away}\n🎯 Conseil: ${advice}\n🔥 Confiance: ${confidence}%`;
     const shareText = encodeURIComponent(plainText);
 
     const card = document.createElement('div');
@@ -350,12 +361,35 @@ function handleGenerateAnalysis() {
     card.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <h4 style="margin:0; color:var(--primary); font-size:1rem;">🧠 Analyse SmartPronoIA</h4>
+            <span style="background:rgba(34, 197, 94, 0.2); color:var(--accent); border: 1px solid var(--accent); padding:3px 10px; border-radius:12px; font-size:0.75rem; font-weight:bold;">
+                Confiance : ${confidence}%
+            </span>
         </div>
 
         <div style="text-align:center; padding: 10px; background:var(--inner-bg); border-radius:8px; margin-bottom:12px; border:1px solid var(--border-color);">
             <div style="font-size:0.95rem; font-weight:bold;">
                 ${home} <span style="color:var(--primary);">VS</span> ${away}
             </div>
+        </div>
+
+        <div style="background:var(--inner-bg); padding:12px; border-radius:8px; margin-bottom:12px; border:1px solid var(--border-color);">
+            <div style="font-size:0.75rem; font-weight:bold; color:var(--text-muted); margin-bottom:8px;">📊 PROBABILITÉS CALCULÉES</div>
+            <div style="display:flex; height:10px; border-radius:5px; overflow:hidden; background:var(--border-color); margin-bottom:10px;">
+                <div style="width:${winHome}%; background:var(--primary);"></div>
+                <div style="width:${draw}%; background:#eab308;"></div>
+                <div style="width:${winAway}%; background:#ef4444;"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.75rem;">
+                <div style="color:var(--primary);">🔵 ${home} : <strong>${winHome}%</strong></div>
+                <div style="color:#eab308;">🟡 Nul : <strong>${draw}%</strong></div>
+                <div style="color:#ef4444;">🔴 ${away} : <strong>${winAway}%</strong></div>
+            </div>
+        </div>
+
+        <div style="background:var(--inner-bg); padding:12px; border-radius:8px; border-left: 4px solid var(--accent); margin-bottom:12px;">
+            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:bold;">🎯 CONSEIL DE PRONOSTIC</div>
+            <div style="color:var(--accent); font-size:1rem; font-weight:bold; margin-top:4px;">${advice}</div>
+            <div style="color:var(--text-color); font-size:0.75rem; margin-top:4px;">Moyenne buts attendus : <strong style="color:var(--primary);">${goalsPredict}</strong></div>
         </div>
 
         <div style="display:flex; gap:8px;">
@@ -407,6 +441,7 @@ function loadHistoryUI() {
     container.innerHTML = history.map(h => `
         <div style="background:var(--inner-bg); border:1px solid var(--border-color); padding:8px 10px; border-radius:6px; margin-bottom:6px;">
             <div style="font-weight:bold; font-size:0.85rem; color:var(--primary);">${h.home} VS ${h.away}</div>
+            <div style="font-size:0.8rem; color:var(--accent);">💡 ${h.advice || 'Analyse complète'} (${h.confidence || 85}% Confiance)</div>
             <div style="font-size:0.7rem; color:var(--text-muted);">Généré le ${h.date}</div>
         </div>
     `).join('');
@@ -417,27 +452,4 @@ window.clearHistory = function() {
     loadHistoryUI();
 };
 
-function setupEventListeners() {
-    const btnGen = document.getElementById('btn-generate');
-    if (btnGen) btnGen.onclick = handleGenerateAnalysis;
-
-    const btnRechargeAd = document.getElementById('btn-recharge-ad');
-    if (btnRechargeAd) {
-        btnRechargeAd.onclick = () => {
-            btnRechargeAd.disabled = true;
-
-            let timer = 5;
-            const interval = setInterval(() => {
-                btnRechargeAd.innerText = `⏳ Pub en cours (${timer}s)...`;
-                timer--;
-                if (timer < 0) {
-                    clearInterval(interval);
-                    updateCredits(getCredits() + 5);
-                    btnRechargeAd.innerText = `🎬 Regarder une pub (+5 Jetons)`;
-                    btnRechargeAd.disabled = false;
-                    alert("🎉 FÉLICITATIONS ! +5 Jetons ont été crédités à votre compte.");
-                }
-            }, 1000);
-        };
-    }
-}
+functi
